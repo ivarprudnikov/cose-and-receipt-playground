@@ -1,13 +1,20 @@
-# Build and run locally
+# Development
 
 **Prerequisites**
 
 * Go
 * Azure functions core tools
 
+## Run locally
+
 ```sh
-go build -o bin/server server.go
-func start
+./run.sh
+```
+
+## Build and deploy
+
+```
+./deploy.sh
 ```
 
 # References
