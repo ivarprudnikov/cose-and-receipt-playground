@@ -9,12 +9,7 @@ Publish
 *.suo
 *.cscfg
 *.Cache
-project.lock.json
 
-/packages
-/TestResults
-
-/tools/NuGet.exe
 /App_Data
 /secrets
 /data
@@ -22,27 +17,5 @@ project.lock.json
 appsettings.json
 local.settings.json
 
-node_modules
-dist
-
-# Local python packages
-.python_packages/
-
-# Python Environments
-.env
-.venv
-env/
-venv/
-ENV/
-env.bak/
-venv.bak/
-
-# Byte-compiled / optimized / DLL files
-__pycache__/
-*.py[cod]
-*$py.class
-
-# Azurite artifacts
-__blobstorage__
-__queuestorage__
-__azurite_db*__.json
+package.zip
+.DS_Store
