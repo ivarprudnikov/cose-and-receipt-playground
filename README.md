@@ -1,4 +1,14 @@
+# Build and run locally
 
+**Prerequisites**
+
+* Go
+* Azure functions core tools
+
+```sh
+go build -o bin/server server.go
+func start
+```
 
 # References
 
