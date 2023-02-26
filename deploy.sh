@@ -2,6 +2,14 @@
 
 RG="playground-cose-eastus-rg"
 FN_NAME="playground-cose-eastus-api"
+# Remove prior versions
+rm -f bin/server package.zip
+# Build the binary
 env GOOS=linux GOARCH=arm64 go build -o bin/server server.go
-zip -r deploy.zip .
-az functionapp deployment source config-zip -g $RG -n $FN_NAME --src deploy.zip
+# Prepare function package
+zip -r package . --include "bin/*" "func-match-all-config/*" host.json
+# Deploy the package
+az functionapp deployment source config-zip -g $RG -n $FN_NAME --src package.zip
+# Preview hostnames 
+az functionapp show -g $RG -n $FN_NAME --query hostNames
+
