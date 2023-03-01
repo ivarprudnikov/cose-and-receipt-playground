@@ -4,4 +4,4 @@
 rm -f bin/server
 go build -o bin/server server.go
 # Start Azure function
-func start
+func start --verbose
