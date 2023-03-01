@@ -1,3 +1,8 @@
+Cose, receipt, did:web playground
+=================================
+
+API: https://playground-cose-eastus-api.azurewebsites.net
+
 # Development
 
 **Prerequisites**
