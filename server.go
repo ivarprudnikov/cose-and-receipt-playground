@@ -4,9 +4,11 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"embed"
 	"encoding/hex"
 	"fmt"
 	"io"
+	"io/fs"
 	"log"
 	"net/http"
 	"os"
@@ -18,6 +20,9 @@ import (
 var privateKey *ecdsa.PrivateKey
 var signer cose.Signer
 var t time.Time
+
+//go:embed static/*
+var static embed.FS
 
 func init() {
 	t = time.Now()
@@ -84,8 +89,12 @@ func main() {
 	http.HandleFunc("/health", healthHandler)
 	http.HandleFunc("/sign", signHandler)
 
-	fs := http.FileServer(http.Dir("./static"))
-	http.Handle("/", fs)
+	contentStatic, err := fs.Sub(static, "static")
+
+	if err != nil {
+		log.Fatal(err)
+	}
+	http.Handle("/", http.FileServer(http.FS(contentStatic)))
 
 	log.Printf("About to listen on %s. Go to https://127.0.0.1%s/", listenAddr, listenAddr)
 	log.Fatal(http.ListenAndServe(listenAddr, nil))
