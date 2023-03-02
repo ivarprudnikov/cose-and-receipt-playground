@@ -6,6 +6,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"os"
@@ -40,6 +41,18 @@ func didHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func signHandler(w http.ResponseWriter, r *http.Request) {
+	body := []byte{}
+	var err error
+	if r.Body != nil {
+		defer r.Body.Close()
+		body, err = io.ReadAll(r.Body)
+		if err != nil {
+			w.WriteHeader(http.StatusBadRequest)
+			fmt.Fprintf(w, `{ "message": "reading request body failed", "error": "%v" }`, err)
+			return
+		}
+	}
+
 	// create message header
 	// TODO: add kid and did issuer pointing to this service
 	headers := cose.Headers{
@@ -47,9 +60,8 @@ func signHandler(w http.ResponseWriter, r *http.Request) {
 			cose.HeaderLabelAlgorithm: cose.AlgorithmES256,
 		},
 	}
-	dataToSign := []byte(`{ "message": "hello world" }`)
 	// sign and marshal message
-	signature, err := cose.Sign1(rand.Reader, signer, headers, dataToSign, nil)
+	signature, err := cose.Sign1(rand.Reader, signer, headers, body, nil)
 	if err != nil {
 		w.WriteHeader(http.StatusBadRequest)
 		fmt.Fprintf(w, `{ "message": "signing failed", "error": "%v" }`, err)
@@ -57,10 +69,10 @@ func signHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	w.Header().Add("Content-Type", "application/json")
 	fmt.Fprintf(w, `{
-		"data": %s,
+		"data": "%s",
 		"keyCreatedAt":"%v", 
 		"COSE_Sign1": "%s"
-	}`, dataToSign, t.UTC().String(), hex.EncodeToString(signature))
+	}`, hex.EncodeToString(body), t.UTC().String(), hex.EncodeToString(signature))
 }
 
 func main() {
@@ -71,6 +83,10 @@ func main() {
 	http.HandleFunc("/.well-known/did.json", didHandler)
 	http.HandleFunc("/health", healthHandler)
 	http.HandleFunc("/sign", signHandler)
+
+	fs := http.FileServer(http.Dir("./static"))
+	http.Handle("/", fs)
+
 	log.Printf("About to listen on %s. Go to https://127.0.0.1%s/", listenAddr, listenAddr)
 	log.Fatal(http.ListenAndServe(listenAddr, nil))
 }
