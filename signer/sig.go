@@ -2,6 +2,8 @@ package signer
 
 import (
 	"crypto/rand"
+	_ "crypto/sha256"
+	"fmt"
 	"strings"
 
 	"github.com/ivarprudnikov/cose-and-receipt-playground/keys"
@@ -27,4 +29,16 @@ func CreateSignature(payload []byte, hostport string) ([]byte, error) {
 	}
 	// sign and marshal message
 	return cose.Sign1(rand.Reader, signer, headers, payload, nil)
+}
+
+func VerifySignature(signature []byte) error {
+	verifier, err := cose.NewVerifier(cose.AlgorithmES256, keys.GetKey().Public())
+	if err != nil {
+		return fmt.Errorf("failed to create signature verifier: %w", err)
+	}
+	var msg cose.Sign1Message
+	if err = msg.UnmarshalCBOR(signature); err != nil {
+		return fmt.Errorf("failed to unmarshal signature bytes: %w", err)
+	}
+	return msg.Verify(nil, verifier)
 }

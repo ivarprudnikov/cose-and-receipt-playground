@@ -5,15 +5,47 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Cose and receipt plyground</title>
+    <style type="text/css">
+      body {
+        font-family: sans-serif;
+      }
+      form {
+        display: flex;
+        flex-direction: column;
+        width: 50%;
+        margin-bottom: 0.5rem;
+      }
+      label {
+        margin-bottom: 0.5rem;
+      }
+      textarea {
+        margin-bottom: 1rem;
+      }
+    </style>
   </head>
   <body>
-    <p>
-        Welcome to the playgroundz.
-    </p>
-    <form action="/sign" method="POST">
+    <h1>Welcome to the playgroundz</h1>
+
+    <form id="sign" name="sign" action="/signature/create" method="POST">
       <label for="payload">Payload</label>
-      <textarea name="payload" id="payload" cols="30" rows="10"></textarea>
+      <textarea name="payload" id="payload" cols="30" rows="10" placeholder="any text or json or else"></textarea>
       <button type="submit">Create signature</button>
     </form>
+
+    <form id="verify" name="verify" action="/signature/verify" method="POST">
+      <label for="signaturejson">Signature in json</label>
+      <textarea name="signaturejson" id="signaturejson" cols="30" rows="10" placeholder='{ "signatureHex": "aabbccddeff" }'></textarea>
+      <button type="submit">Verify</button>
+    </form>
+
+    <p>To preview signature use the following websites</p>
+    <ul>
+      <li>
+        <a href="https://gluecose.github.io/cose-viewer/">https://gluecose.github.io/cose-viewer/</a>
+      </li>
+      <li>
+        <a href="https://cbor.me/">https://cbor.me/</a>
+      </li>
+    </ul>
   </body>
 </html>
