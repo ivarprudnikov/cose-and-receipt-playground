@@ -1,13 +1,12 @@
 package main
 
 import (
-	"embed"
+	_ "embed"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
-	"io/fs"
 	"log"
 	"net/http"
 	"os"
@@ -16,8 +15,16 @@ import (
 	"github.com/ivarprudnikov/cose-and-receipt-playground/signer"
 )
 
-//go:embed static/*
-var static embed.FS
+//go:embed index.html
+var indexHtml string
+
+func indexHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate") // HTTP 1.1
+	w.Header().Set("Pragma", "no-cache")                                   // HTTP 1.0
+	w.Header().Set("Expires", "0")                                         // Proxies
+	w.Header().Add("Content-Type", "text/html")
+	fmt.Fprint(w, indexHtml)
+}
 
 func didHandler(w http.ResponseWriter, r *http.Request) {
 	didDoc, err := keys.CreateDoc(getHostPort())
@@ -99,14 +106,8 @@ func main() {
 	http.HandleFunc("/.well-known/did.json", didHandler)
 	http.HandleFunc("/signature/create", sigCreateHandler)
 	http.HandleFunc("/signature/verify", sigVerifyHandler)
-
-	contentStatic, err := fs.Sub(static, "static")
-
-	if err != nil {
-		log.Fatal(err)
-	}
-	http.Handle("/", http.FileServer(http.FS(contentStatic)))
-
+	http.HandleFunc("/", indexHandler)
+	http.HandleFunc("/index.html", indexHandler)
 	port := getPort()
 	listenAddr := ":" + port
 	log.Printf("About to listen on %s. Go to https://127.0.0.1%s/", listenAddr, listenAddr)
