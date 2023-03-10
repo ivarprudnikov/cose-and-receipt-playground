@@ -10,7 +10,7 @@ import (
 
 const KEY_ID = "foobar"
 
-func CreateDoc(hostport string) ([]byte, error) {
+func CreateDoc(hostport string) (string, error) {
 
 	privateKey := GetKey()
 
@@ -18,16 +18,16 @@ func CreateDoc(hostport string) ([]byte, error) {
 
 	key, err := jwk.New(privateKey)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create symmetric key: %w", err)
+		return "", fmt.Errorf("failed to create symmetric key: %w", err)
 	}
 	if _, ok := key.(jwk.ECDSAPrivateKey); !ok {
-		return nil, fmt.Errorf(fmt.Sprintf("expected jwk.SymmetricKey, got %T\n", key), err)
+		return "", fmt.Errorf(fmt.Sprintf("expected jwk.SymmetricKey, got %T\n", key), err)
 	}
 
 	key.Set(jwk.KeyIDKey, KEY_ID)
 	buf, err := json.MarshalIndent(key, "", "  ")
 	if err != nil {
-		return nil, fmt.Errorf("failed to marshal key into JSON: %w", err)
+		return "", fmt.Errorf("failed to marshal key into JSON: %w", err)
 
 	}
 
@@ -45,5 +45,5 @@ func CreateDoc(hostport string) ([]byte, error) {
 		}]
 	}`, hostport, hostport, KEY_ID, hostport, buf)
 
-	return []byte(didDoc), nil
+	return didDoc, nil
 }

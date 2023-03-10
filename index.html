@@ -20,6 +20,8 @@
       <div class="col-sm-6">
 
         <h2>Create signature</h2>
+        <p>Signature will contain a DID issuer header which will point back to the did document hosted here <a
+            href=".well-known/did.json">.well-known/did.json</a></p>
 
         <form id="sign" name="sign" action="/signature/create" method="POST">
           <div class="mb-3">
@@ -36,6 +38,9 @@
       <div class="col-sm-6">
 
         <h2>Verify signature</h2>
+
+        <p>Verification will check if the provided signature was issued in this service. It will not evaluate the
+          did:web as the key is available in memory.</p>
 
         <form id="verify" name="verify" action="/signature/verify" method="POST">
           <div class="mb-3">
