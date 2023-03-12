@@ -27,7 +27,7 @@
           <div class="mb-3">
             <label for="payload" class="form-label">Payload</label>
             <textarea name="payload" class="form-control" aria-describedby="payloadHelp" id="payload" cols="30"
-              rows="10" placeholder="any text or json or else"></textarea>
+              rows="8" placeholder="any text or json or else"></textarea>
             <div id="payloadHelp" class="form-text">Payload will get embedded in the COSE_Sign1 signature envelope. The
               generated private key will be used to sign.</div>
           </div>
@@ -42,15 +42,20 @@
         <p>Verification will check if the provided signature was issued in this service. It will not evaluate the
           did:web as the key is available in memory.</p>
 
-        <form id="verify" name="verify" action="/signature/verify" method="POST">
+        <form id="verify" name="verify" action="/signature/verify" method="POST" enctype="multipart/form-data">
           <div class="mb-3">
-            <label for="signaturejson" class="form-label">Signature in json</label>
-            <textarea name="signaturejson" class="form-control" aria-describedby="signaturejsonHelp" id="signaturejson"
-              cols="30" rows="10" placeholder='{ "signatureHex": "aabbccddeff" }'></textarea>
-            <div id="payloadHelp" class="form-text">Verification will check if the given signature is issued here. The
-              key gets regenerated quite often though!</div>
+            <label for="signaturefile" class="form-label">Signature file</label>
+            <input type="file" name="signaturefile" class="form-control" aria-describedby="signaturefileHelp"
+              id="signaturefile" />
+            <div id="signaturefileHelp" class="form-text">Attach the cose file if you have it</div>
           </div>
-          <button type="submit" class="btn btn-primary">Verify</button>
+          <div class="mb-3">
+            <label for="signaturehex" class="form-label">Signature HEX</label>
+            <textarea name="signaturehex" class="form-control" aria-describedby="signaturehexHelp" id="signaturehex"
+              cols="30" rows="4" placeholder='d2845828a301260446666f6f62617219018758186469643a7765623a6c6f63616c686f737425334137303731a04378787858401155407c3e8c4393010512973c333f2d6683a13eeec2a1baa794fb88f2d2e8e0de5e77d970c1ba3ad15c3742ae9189a76072fae019e46f15c0e1d6a528b58f5b'></textarea>
+            <div id="signaturehexHelp" class="form-text">If you do not have a file but know the signature representation in HEX then use this field</div>
+          </div>
+          <button type="submit" class="btn btn-primary">Verify signature</button>
         </form>
 
       </div>

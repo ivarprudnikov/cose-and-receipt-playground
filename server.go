@@ -4,7 +4,6 @@ import (
 	"crypto/sha256"
 	_ "embed"
 	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -18,6 +17,8 @@ import (
 
 //go:embed index.html
 var indexHtml string
+
+const maxFormSize = int64(32 << 20) // 32 MB
 
 func indexHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate") // HTTP 1.1
@@ -65,32 +66,46 @@ func sigCreateHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(signature)
 }
 
-type verifyBody struct {
-	SignatureHex string `json:"signatureHex"`
-}
-
 func sigVerifyHandler(w http.ResponseWriter, r *http.Request) {
-	err := r.ParseForm()
+	err := r.ParseMultipartForm(maxFormSize)
 	if err != nil {
 		sendError(w, "failed to read request body parameters", err)
 		return
 	}
-	signaturejson := r.PostForm.Get("signaturejson")
-	if signaturejson == "" {
-		sendError(w, "signaturejson is empty", nil)
-		return
-	}
-	var verifyBody verifyBody
-	err = json.Unmarshal([]byte(signaturejson), &verifyBody)
-	if err != nil {
-		sendError(w, "unmarshal request body failed", err)
+
+	signaturefiles := r.MultipartForm.File["signaturefile"]
+	signaturehex := r.PostForm.Get("signaturehex")
+
+	if signaturehex == "" && len(signaturefiles) == 0 {
+		sendError(w, "signaturefile or signaturehex is required", nil)
 		return
 	}
 
-	signature, err := hex.DecodeString(verifyBody.SignatureHex)
-	if err != nil {
-		sendError(w, "failed to read signature hex", err)
+	if signaturehex != "" && len(signaturefiles) > 0 {
+		sendError(w, "only one representation is allowed, use file or hex", nil)
 		return
+	}
+
+	var signature []byte
+	var fileAttachment io.ReadCloser
+	if len(signaturefiles) > 0 {
+		fileAttachment, err = signaturefiles[0].Open()
+		if err != nil {
+			sendError(w, "failed to open signature file", err)
+			return
+		}
+		defer fileAttachment.Close()
+		signature, err = io.ReadAll(fileAttachment)
+		if err != nil {
+			sendError(w, "failed to read signature attachment", err)
+			return
+		}
+	} else {
+		signature, err = hex.DecodeString(signaturehex)
+		if err != nil {
+			sendError(w, "failed to read signature hex", err)
+			return
+		}
 	}
 
 	err = signer.VerifySignature(signature)
@@ -101,7 +116,7 @@ func sigVerifyHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Add("Content-Type", "application/json")
 	fmt.Fprintf(w, `{
-		"status": "ok"
+		"valid": true
 	}`)
 }
 
