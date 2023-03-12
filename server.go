@@ -1,6 +1,7 @@
 package main
 
 import (
+	"crypto/sha256"
 	_ "embed"
 	"encoding/hex"
 	"encoding/json"
@@ -37,7 +38,6 @@ func didHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func sigCreateHandler(w http.ResponseWriter, r *http.Request) {
-
 	err := r.ParseForm()
 	if err != nil {
 		sendError(w, "failed to read request body parameters", err)
@@ -48,18 +48,21 @@ func sigCreateHandler(w http.ResponseWriter, r *http.Request) {
 		sendError(w, "payload is empty", nil)
 		return
 	}
+	payloadHash := sha256.Sum256([]byte(payload))
+	payloadHashHex := hex.EncodeToString(payloadHash[:])
 
 	signature, err := signer.CreateSignature([]byte(payload), getHostPort())
 	if err != nil {
 		sendError(w, "failed to create signature", err)
 		return
 	}
-
-	w.Header().Add("Content-Type", "application/json")
-	fmt.Fprintf(w, `{
-		"payloadHex": "%s",
-		"signatureHex": "%s"
-	}`, hex.EncodeToString([]byte(payload)), hex.EncodeToString(signature))
+	signatureHex := hex.EncodeToString(signature)
+	w.Header().Add("Content-Type", "application/cose")
+	w.Header().Add("Content-Disposition", fmt.Sprintf(`attachment; filename="signature.%s.cose"`, payloadHashHex))
+	w.Header().Add("Content-Transfer-Encoding", "binary")
+	w.Header().Add("Content-Length", fmt.Sprintf("%d", len(signature)))
+	w.Header().Add("X-Signature-Hex", signatureHex)
+	w.Write(signature)
 }
 
 type verifyBody struct {
