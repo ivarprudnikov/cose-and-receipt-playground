@@ -11,7 +11,7 @@ import (
 )
 
 // https://datatracker.ietf.org/doc/draft-ietf-scitt-architecture/
-const ISSUER_HEADER_KEY = 391
+const ISSUER_HEADER_KEY = int64(391)
 
 func CreateSignature(payload []byte, hostport string) ([]byte, error) {
 	hostport = strings.ReplaceAll(hostport, ":", "%3A")
@@ -22,9 +22,10 @@ func CreateSignature(payload []byte, hostport string) ([]byte, error) {
 	// create message header
 	headers := cose.Headers{
 		Protected: cose.ProtectedHeader{
-			cose.HeaderLabelAlgorithm: cose.AlgorithmES256,
-			cose.HeaderLabelKeyID:     []byte(keys.KEY_ID),
-			ISSUER_HEADER_KEY:         []byte("did:web:" + hostport),
+			cose.HeaderLabelAlgorithm:   cose.AlgorithmES256,
+			cose.HeaderLabelContentType: "text/plain",
+			cose.HeaderLabelKeyID:       []byte("#" + keys.KEY_ID),
+			ISSUER_HEADER_KEY:           "did:web:" + hostport,
 		},
 	}
 	// sign and marshal message
