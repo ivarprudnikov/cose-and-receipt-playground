@@ -4,6 +4,8 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+
+	"github.com/veraison/go-cose"
 )
 
 var privateKey *ecdsa.PrivateKey
@@ -18,4 +20,12 @@ func init() {
 
 func GetKey() *ecdsa.PrivateKey {
 	return privateKey
+}
+
+func GetCoseSigner() (cose.Signer, error) {
+	return cose.NewSigner(cose.AlgorithmES256, GetKey())
+}
+
+func GetCoseVerifier() (cose.Verifier, error) {
+	return cose.NewVerifier(cose.AlgorithmES256, GetKey().Public())
 }

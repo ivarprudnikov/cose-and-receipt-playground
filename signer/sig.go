@@ -15,7 +15,7 @@ const ISSUER_HEADER_KEY = int64(391)
 
 func CreateSignature(payload []byte, hostport string) ([]byte, error) {
 	hostport = strings.ReplaceAll(hostport, ":", "%3A")
-	signer, err := cose.NewSigner(cose.AlgorithmES256, keys.GetKey())
+	signer, err := keys.GetCoseSigner()
 	if err != nil {
 		return nil, err
 	}
@@ -33,7 +33,7 @@ func CreateSignature(payload []byte, hostport string) ([]byte, error) {
 }
 
 func VerifySignature(signature []byte) error {
-	verifier, err := cose.NewVerifier(cose.AlgorithmES256, keys.GetKey().Public())
+	verifier, err := keys.GetCoseVerifier()
 	if err != nil {
 		return fmt.Errorf("failed to create signature verifier: %w", err)
 	}
