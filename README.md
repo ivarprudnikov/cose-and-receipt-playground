@@ -1,6 +1,8 @@
 Cose, receipt, did:web playground
 =================================
 
+[![Build](https://github.com/ivarprudnikov/cose-and-receipt-playground/actions/workflows/build.yml/badge.svg)](https://github.com/ivarprudnikov/cose-and-receipt-playground/actions/workflows/build.yml)
+
 API/website: https://playground-cose-eastus-api.azurewebsites.net
 
 # Development
