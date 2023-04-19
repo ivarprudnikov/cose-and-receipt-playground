@@ -11,8 +11,10 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/ivarprudnikov/cose-and-receipt-playground/countersigner"
 	"github.com/ivarprudnikov/cose-and-receipt-playground/keys"
 	"github.com/ivarprudnikov/cose-and-receipt-playground/signer"
+	"github.com/veraison/go-cose"
 )
 
 //go:embed index.html
@@ -67,47 +69,11 @@ func sigCreateHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func sigVerifyHandler(w http.ResponseWriter, r *http.Request) {
-	err := r.ParseMultipartForm(maxFormSize)
+	signature, err := readBytesFromForm(r, "signaturefile", "signaturehex")
 	if err != nil {
-		sendError(w, "failed to read request body parameters", err)
+		sendError(w, "failed to read signature", err)
 		return
 	}
-
-	signaturefiles := r.MultipartForm.File["signaturefile"]
-	signaturehex := r.PostForm.Get("signaturehex")
-
-	if signaturehex == "" && len(signaturefiles) == 0 {
-		sendError(w, "signaturefile or signaturehex is required", nil)
-		return
-	}
-
-	if signaturehex != "" && len(signaturefiles) > 0 {
-		sendError(w, "only one representation is allowed, use file or hex", nil)
-		return
-	}
-
-	var signature []byte
-	var fileAttachment io.ReadCloser
-	if len(signaturefiles) > 0 {
-		fileAttachment, err = signaturefiles[0].Open()
-		if err != nil {
-			sendError(w, "failed to open signature file", err)
-			return
-		}
-		defer fileAttachment.Close()
-		signature, err = io.ReadAll(fileAttachment)
-		if err != nil {
-			sendError(w, "failed to read signature attachment", err)
-			return
-		}
-	} else {
-		signature, err = hex.DecodeString(signaturehex)
-		if err != nil {
-			sendError(w, "failed to read signature hex", err)
-			return
-		}
-	}
-
 	err = signer.VerifySignature(signature)
 	if err != nil {
 		sendError(w, "failed to verify signature", err)
@@ -120,10 +86,44 @@ func sigVerifyHandler(w http.ResponseWriter, r *http.Request) {
 	}`)
 }
 
+func receiptCreateHandler(w http.ResponseWriter, r *http.Request) {
+	signature, err := readBytesFromForm(r, "signaturefile", "signaturehex")
+	if err != nil {
+		sendError(w, "failed to read signature", err)
+		return
+	}
+	err = signer.VerifySignature(signature)
+	if err != nil {
+		sendError(w, "failed to verify signature", err)
+		return
+	}
+	signatureHash := sha256.Sum256([]byte(signature))
+	signatureHashHex := hex.EncodeToString(signatureHash[:])
+
+	var msg cose.Sign1Message
+	if err = msg.UnmarshalCBOR(signature); err != nil {
+		sendError(w, "failed to unmarshal signature bytes", err)
+		return
+	}
+	receipt, err := countersigner.Countersign(msg, getHostPort())
+	if err != nil {
+		sendError(w, "failed to countersign", err)
+		return
+	}
+	receiptHex := hex.EncodeToString(receipt)
+	w.Header().Add("Content-Type", "application/cbor")
+	w.Header().Add("Content-Disposition", fmt.Sprintf(`attachment; filename="receipt.%s.cbor"`, signatureHashHex))
+	w.Header().Add("Content-Transfer-Encoding", "binary")
+	w.Header().Add("Content-Length", fmt.Sprintf("%d", len(receipt)))
+	w.Header().Add("X-Receipt-Hex", receiptHex)
+	w.Write(receipt)
+}
+
 func main() {
 	http.HandleFunc("/.well-known/did.json", didHandler)
 	http.HandleFunc("/signature/create", sigCreateHandler)
 	http.HandleFunc("/signature/verify", sigVerifyHandler)
+	http.HandleFunc("/receipt/create", receiptCreateHandler)
 	http.HandleFunc("/", indexHandler)
 	http.HandleFunc("/index.html", indexHandler)
 	port := getPort()
@@ -132,22 +132,43 @@ func main() {
 	log.Fatal(http.ListenAndServe(listenAddr, nil))
 }
 
-func readRequestBody(r *http.Request) ([]byte, error) {
-	if r.Method != http.MethodPost {
-		return nil, errors.New("method not allowed")
-	}
-
-	if r.Body == nil {
-		return nil, errors.New("request body is empty")
-	}
-
-	defer r.Body.Close()
-	body, err := io.ReadAll(r.Body)
+// readBytesFromForm reads bytes from either a file or a hex string form fields
+func readBytesFromForm(r *http.Request, filekey string, hexkey string) ([]byte, error) {
+	err := r.ParseMultipartForm(maxFormSize)
 	if err != nil {
-		return nil, fmt.Errorf("reading request body failed: %w", err)
+		return nil, fmt.Errorf("failed to read request body parameters: %w", err)
 	}
 
-	return body, nil
+	formFiles := r.MultipartForm.File[filekey]
+	formHex := r.PostForm.Get(hexkey)
+
+	if formHex == "" && len(formFiles) == 0 {
+		return nil, fmt.Errorf("%s or %s is required", filekey, hexkey)
+	}
+
+	if formHex != "" && len(formFiles) > 0 {
+		return nil, errors.New("only one representation is allowed, use file or hex")
+	}
+
+	var signature []byte
+	var fileAttachment io.ReadCloser
+	if len(formFiles) > 0 {
+		fileAttachment, err = formFiles[0].Open()
+		if err != nil {
+			return nil, fmt.Errorf("failed to open file: %w", err)
+		}
+		defer fileAttachment.Close()
+		signature, err = io.ReadAll(fileAttachment)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read attachment: %w", err)
+		}
+	} else {
+		signature, err = hex.DecodeString(formHex)
+		if err != nil {
+			return nil, fmt.Errorf("failed to read hex: %w", err)
+		}
+	}
+	return signature, nil
 }
 
 func sendError(w http.ResponseWriter, message string, err error) {

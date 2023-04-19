@@ -94,7 +94,43 @@
 
     <hr>
 
+    <div class="row">
+      <div class="col-md-6">
 
+        <h2 id="countersign">Countersign signature</h2>
+
+        <form id="countersign" name="countersign" action="/receipt/create" method="POST" enctype="multipart/form-data">
+          <div class="mb-3">
+            <label for="signaturefile" class="form-label">Signature file</label>
+            <input type="file" name="signaturefile" class="form-control" aria-describedby="signaturefileHelp"
+              id="signaturefile" />
+            <div id="signaturefileHelp" class="form-text">Attach the cose file if you have it</div>
+          </div>
+          <div class="mb-3">
+            <label for="signaturehex" class="form-label">Signature HEX</label>
+            <textarea name="signaturehex" class="form-control" aria-describedby="signaturehexHelp" id="signaturehex"
+              cols="30" rows="4" placeholder='d2845828a301260446666f6f62617219018758186469643a7765623a6c6f63616c686f737425334137303731a04378787858401155407c3e8c4393010512973c333f2d6683a13eeec2a1baa794fb88f2d2e8e0de5e77d970c1ba3ad15c3742ae9189a76072fae019e46f15c0e1d6a528b58f5b'></textarea>
+            <div id="signaturehexHelp" class="form-text">If you do not have a file but know the signature representation in HEX then use this field</div>
+          </div>
+          <button type="submit" class="btn btn-primary">Countersign</button>
+        </form>
+
+        <div class="card text-bg-light my-4">
+          <div class="card-header">Countersign with cURL</div>
+          <div class="card-body">
+            <p class="card-text">Using a file:</p>
+            <pre class="card-text">curl -L 'https://playground-cose-eastus-api.azurewebsites.net/receipt/create' -X POST \
+              --form signaturefile='@./my/signature/file.cose'</pre>
+            <p class="card-text">Using a hex value:</p>
+            <pre class="card-text">curl -L 'https://playground-cose-eastus-api.azurewebsites.net/receipt/create' -X POST \
+              --form signaturehex='d2845828a301260446666f6f62617219018758186469643a7765623a6c6f63616c686f737425334137303731a04378787858401155407c3e8c4393010512973c333f2d6683a13eeec2a1baa794fb88f2d2e8e0de5e77d970c1ba3ad15c3742ae9189a76072fae019e46f15c0e1d6a528b58f5b'</pre>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <hr>
 
     <p>To preview signature use the following websites</p>
     <ul>
