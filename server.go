@@ -119,11 +119,48 @@ func receiptCreateHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(receipt)
 }
 
+func receiptVerifyHandler(w http.ResponseWriter, r *http.Request) {
+	signature, err := readBytesFromForm(r, "signaturefile", "signaturehex")
+	if err != nil {
+		sendError(w, "failed to read signature", err)
+		return
+	}
+	receipt, err := readBytesFromForm(r, "receiptfile", "receipthex")
+	if err != nil {
+		sendError(w, "failed to read receipt", err)
+		return
+	}
+
+	var target cose.Sign1Message
+	if err = target.UnmarshalCBOR(signature); err != nil {
+		sendError(w, "failed to unmarshal signature bytes", err)
+		return
+	}
+
+	var countersignature cose.Sign1Message
+	if err = countersignature.UnmarshalCBOR(receipt); err != nil {
+		sendError(w, "failed to unmarshal receipt bytes", err)
+		return
+	}
+
+	err = countersigner.Verify(countersignature, target)
+	if err != nil {
+		sendError(w, "failed to verify receipt", err)
+		return
+	}
+
+	w.Header().Add("Content-Type", "application/json")
+	fmt.Fprintf(w, `{
+		"valid": true
+	}`)
+}
+
 func main() {
 	http.HandleFunc("/.well-known/did.json", didHandler)
 	http.HandleFunc("/signature/create", sigCreateHandler)
 	http.HandleFunc("/signature/verify", sigVerifyHandler)
 	http.HandleFunc("/receipt/create", receiptCreateHandler)
+	http.HandleFunc("/receipt/verify", receiptVerifyHandler)
 	http.HandleFunc("/", indexHandler)
 	http.HandleFunc("/index.html", indexHandler)
 	port := getPort()
