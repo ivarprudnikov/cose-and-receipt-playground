@@ -20,8 +20,9 @@ import (
 //go:embed index.html
 var indexHtml string
 
-const maxFormSize = int64(32 << 20) // 32 MB
+const MAX_FORM_SIZE = int64(32 << 20) // 32 MB
 
+// indexHandler returns the main index page
 func indexHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate") // HTTP 1.1
 	w.Header().Set("Pragma", "no-cache")                                   // HTTP 1.0
@@ -30,6 +31,7 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, indexHtml)
 }
 
+// didHandler returns a DID document for the current server
 func didHandler(w http.ResponseWriter, r *http.Request) {
 	didDoc, err := keys.CreateDoc(getHostPort())
 	if err != nil {
@@ -40,6 +42,7 @@ func didHandler(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, didDoc)
 }
 
+// sigCreateHandler creates a signature for a payload provided in the request
 func sigCreateHandler(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseForm()
 	if err != nil {
@@ -68,6 +71,7 @@ func sigCreateHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(signature)
 }
 
+// sigVerifyHandler verifies a signature provided in the request
 func sigVerifyHandler(w http.ResponseWriter, r *http.Request) {
 	signature, err := readBytesFromForm(r, "signaturefile", "signaturehex")
 	if err != nil {
@@ -86,6 +90,7 @@ func sigVerifyHandler(w http.ResponseWriter, r *http.Request) {
 	}`)
 }
 
+// receiptCreateHandler creates a receipt for a signature provided in the request
 func receiptCreateHandler(w http.ResponseWriter, r *http.Request) {
 	signature, err := readBytesFromForm(r, "signaturefile", "signaturehex")
 	if err != nil {
@@ -119,6 +124,7 @@ func receiptCreateHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write(receipt)
 }
 
+// receiptVerifyHandler verifies a receipt and a signature provided in the request
 func receiptVerifyHandler(w http.ResponseWriter, r *http.Request) {
 	signature, err := readBytesFromForm(r, "signaturefile", "signaturehex")
 	if err != nil {
@@ -155,6 +161,7 @@ func receiptVerifyHandler(w http.ResponseWriter, r *http.Request) {
 	}`)
 }
 
+// main starts the server
 func main() {
 	http.HandleFunc("/.well-known/did.json", didHandler)
 	http.HandleFunc("/signature/create", sigCreateHandler)
@@ -169,9 +176,9 @@ func main() {
 	log.Fatal(http.ListenAndServe(listenAddr, nil))
 }
 
-// readBytesFromForm reads bytes from either a file or a hex string form fields
+// readBytesFromForm reads bytes from either a file or a hex string from the form fields
 func readBytesFromForm(r *http.Request, filekey string, hexkey string) ([]byte, error) {
-	err := r.ParseMultipartForm(maxFormSize)
+	err := r.ParseMultipartForm(MAX_FORM_SIZE)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read request body parameters: %w", err)
 	}
@@ -208,12 +215,14 @@ func readBytesFromForm(r *http.Request, filekey string, hexkey string) ([]byte, 
 	return signature, nil
 }
 
+// sendError sends a json error response
 func sendError(w http.ResponseWriter, message string, err error) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusBadRequest)
 	fmt.Fprintf(w, `{ "message": "%s", "error": "%v" }`, message, err)
 }
 
+// getHostPort returns the host and port of this function app
 func getHostPort() string {
 	if val, ok := os.LookupEnv("WEBSITE_HOSTNAME"); ok {
 		return val
@@ -221,6 +230,7 @@ func getHostPort() string {
 	return "localhost:" + getPort()
 }
 
+// getPort returns the port of this function app
 func getPort() string {
 	if val, ok := os.LookupEnv("FUNCTIONS_CUSTOMHANDLER_PORT"); ok {
 		return val
