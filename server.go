@@ -33,7 +33,7 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 
 // didHandler returns a DID document for the current server
 func didHandler(w http.ResponseWriter, r *http.Request) {
-	didDoc, err := keys.CreateDoc(getHostPort())
+	didDoc, err := keys.CreateDoc(getHostPort(), keys.GetKey().Public())
 	if err != nil {
 		sendError(w, "failed to create did doc", err)
 		return
