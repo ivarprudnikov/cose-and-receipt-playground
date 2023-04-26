@@ -2,6 +2,7 @@ Cose, receipt, did:web playground
 =================================
 
 [![Build](https://github.com/ivarprudnikov/cose-and-receipt-playground/actions/workflows/build.yml/badge.svg)](https://github.com/ivarprudnikov/cose-and-receipt-playground/actions/workflows/build.yml)
+[![Go Report Card](https://goreportcard.com/badge/github.com/ivarprudnikov/cose-and-receipt-playground)](https://goreportcard.com/report/github.com/ivarprudnikov/cose-and-receipt-playground)
 
 API/website: https://playground-cose-eastus-api.azurewebsites.net
 
@@ -12,24 +13,40 @@ API/website: https://playground-cose-eastus-api.azurewebsites.net
 * Go
 * Azure functions core tools
 
-## Run locally
+## Build and test
+
+* build the binary `GOOS=linux GOARCH=amd64 go build -o bin/server server.go`
+* run tests `go test -v ./...`
+
+## Azure function
+
+### Build and run locally
 
 ```sh
-./run.sh
+./scripts/run.sh
 ```
 
-## Build and deploy
+### Setup necessary resources
 
 ```
-./deploy.sh
+./deployments/azure.infra.create.sh
+```
+
+### Build and deploy (update)
+
+```
+./deployments/azure.fn.deploy.sh
 ```
 
 # References
 
-## COSE
+## Signatures and receipts
 
 - CBOR Object Signing and Encryption (COSE): Structures and Process https://datatracker.ietf.org/doc/html/rfc9052
 - CBOR Object Signing and Encryption (COSE): Countersignatures https://datatracker.ietf.org/doc/html/rfc9338 
+- SCITT community https://github.com/scitt-community
+- SCITT Architecture draft https://datatracker.ietf.org/doc/draft-ietf-scitt-architecture/
+- SCITT receipts https://datatracker.ietf.org/doc/draft-birkholz-scitt-receipts/
 
 ## Azure functions
 
