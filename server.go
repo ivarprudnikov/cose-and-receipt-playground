@@ -17,7 +17,7 @@ import (
 	"github.com/veraison/go-cose"
 )
 
-//go:embed index.html
+//go:embed web/index.html
 var indexHtml string
 
 const MAX_FORM_SIZE = int64(32 << 20) // 32 MB
