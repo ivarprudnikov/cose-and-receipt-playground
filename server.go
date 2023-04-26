@@ -11,9 +11,9 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/ivarprudnikov/cose-and-receipt-playground/countersigner"
-	"github.com/ivarprudnikov/cose-and-receipt-playground/keys"
-	"github.com/ivarprudnikov/cose-and-receipt-playground/signer"
+	"github.com/ivarprudnikov/cose-and-receipt-playground/internal/countersigner"
+	"github.com/ivarprudnikov/cose-and-receipt-playground/internal/keys"
+	"github.com/ivarprudnikov/cose-and-receipt-playground/internal/signer"
 	"github.com/veraison/go-cose"
 )
 

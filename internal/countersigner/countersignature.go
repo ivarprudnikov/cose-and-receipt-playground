@@ -5,8 +5,8 @@ import (
 	"strings"
 
 	"github.com/fxamacker/cbor/v2"
-	"github.com/ivarprudnikov/cose-and-receipt-playground/keys"
-	"github.com/ivarprudnikov/cose-and-receipt-playground/signer"
+	"github.com/ivarprudnikov/cose-and-receipt-playground/internal/keys"
+	"github.com/ivarprudnikov/cose-and-receipt-playground/internal/signer"
 	"github.com/veraison/go-cose"
 )
 

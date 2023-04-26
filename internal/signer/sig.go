@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/ivarprudnikov/cose-and-receipt-playground/keys"
+	"github.com/ivarprudnikov/cose-and-receipt-playground/internal/keys"
 	"github.com/veraison/go-cose"
 )
 

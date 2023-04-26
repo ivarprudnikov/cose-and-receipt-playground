@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ivarprudnikov/cose-and-receipt-playground/keys"
+	"github.com/ivarprudnikov/cose-and-receipt-playground/internal/keys"
 	"github.com/stretchr/testify/require"
 )
 
