@@ -54,4 +54,13 @@ API/website: https://playground-cose-eastus-api.azurewebsites.net
 - Install and use Azure functions core tools https://learn.microsoft.com/en-us/azure/azure-functions/functions-run-local
 - Wildcard routes in function config https://briandunnington.github.io/azure_functions_wildcard_routing
 - Mount a file share in the function (Linux) https://learn.microsoft.com/en-us/azure/azure-functions/scripts/functions-cli-mount-files-storage-linux
+
+
+
+wcbnkelmrn
+rtber
+ere
+
+
+
 - Deploy a function with Azure CLI https://markheath.net/post/deploying-azure-functions-with-azure-cli 
