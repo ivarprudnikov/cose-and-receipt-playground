@@ -2,7 +2,7 @@ module github.com/ivarprudnikov/cose-and-receipt-playground
 
 go 1.20
 
-require github.com/veraison/go-cose v1.1.0
+require github.com/veraison/go-cose v1.2.0
 
 require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
