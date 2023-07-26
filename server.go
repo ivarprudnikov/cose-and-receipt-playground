@@ -4,6 +4,7 @@ import (
 	"crypto/sha256"
 	_ "embed"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -33,7 +34,7 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 
 // didHandler returns a DID document for the current server
 func didHandler(w http.ResponseWriter, r *http.Request) {
-	didDoc, err := keys.CreateDoc(getHostPort(), keys.GetKey().Public())
+	didDoc, err := keys.CreateDoc(getHostPort(), keys.GetKeyDefault().Public())
 	if err != nil {
 		sendError(w, "failed to create did doc", err)
 		return
@@ -78,7 +79,7 @@ func sigVerifyHandler(w http.ResponseWriter, r *http.Request) {
 		sendError(w, "failed to read signature", err)
 		return
 	}
-	err = signer.VerifySignature(signature)
+	err = signer.VerifySignature(signature, nil)
 	if err != nil {
 		sendError(w, "failed to verify signature", err)
 		return
@@ -97,7 +98,7 @@ func receiptCreateHandler(w http.ResponseWriter, r *http.Request) {
 		sendError(w, "failed to read signature", err)
 		return
 	}
-	err = signer.VerifySignature(signature)
+	err = signer.VerifySignature(signature, nil)
 	if err != nil {
 		sendError(w, "failed to verify signature", err)
 		return
@@ -215,11 +216,25 @@ func readBytesFromForm(r *http.Request, filekey string, hexkey string) ([]byte, 
 	return signature, nil
 }
 
+type ApiError struct {
+	Message string `json:"message"`
+	Error   string `json:"error"`
+}
+
 // sendError sends a json error response
 func sendError(w http.ResponseWriter, message string, err error) {
+	log.Printf("%s: %+v", message, err)
 	w.Header().Set("Content-Type", "application/json")
+	apiError := ApiError{
+		Message: message,
+		Error:   err.Error(),
+	}
+	apiErrorJson, marshalErr := json.Marshal(apiError)
+	if marshalErr != nil {
+		log.Fatalf("failed to marshal error: %+v", marshalErr)
+	}
 	w.WriteHeader(http.StatusBadRequest)
-	fmt.Fprintf(w, `{ "message": "%s", "error": "%v" }`, message, err)
+	fmt.Fprint(w, string(apiErrorJson))
 }
 
 // getHostPort returns the host and port of this function app

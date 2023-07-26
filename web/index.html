@@ -64,8 +64,8 @@
 
         <h2 id="verifysig">Verify signature</h2>
 
-        <p>Verification will check if the provided signature was issued in this service. It will not evaluate the
-          did:web as the key is available in memory.</p>
+        <p>Verification will download did:web keys from the given signature issuer and 
+          will validate the signature against it.</p>
 
         <form id="verify" name="verify" action="/signature/verify" method="POST" enctype="multipart/form-data">
           <fieldset>

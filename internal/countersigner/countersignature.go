@@ -43,7 +43,7 @@ func GetCountersignHeaders(hostport string) cose.Headers {
 
 // Using full COSE_Countersignature aka cose.Sign1Message
 func Countersign(target cose.Sign1Message, hostport string) ([]byte, error) {
-	signer, err := keys.GetCoseSigner()
+	signer, err := keys.GetCoseSignerDefault()
 	if err != nil {
 		return nil, err
 	}
@@ -65,7 +65,7 @@ func Countersign(target cose.Sign1Message, hostport string) ([]byte, error) {
 }
 
 func Verify(countersignature cose.Sign1Message, target cose.Sign1Message) error {
-	verifier, err := keys.GetCoseVerifier()
+	verifier, err := keys.GetCoseVerifierDefault()
 	if err != nil {
 		return err
 	}

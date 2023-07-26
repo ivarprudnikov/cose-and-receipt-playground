@@ -1,6 +1,7 @@
 package keys
 
 import (
+	"crypto"
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
@@ -41,14 +42,22 @@ func init() {
 	}
 }
 
-func GetKey() *ecdsa.PrivateKey {
+func GetKeyDefault() *ecdsa.PrivateKey {
 	return privateKey
 }
 
-func GetCoseSigner() (cose.Signer, error) {
-	return cose.NewSigner(cose.AlgorithmES256, GetKey())
+func GetCoseSignerDefault() (cose.Signer, error) {
+	return GetCoseSignerFor(cose.AlgorithmES256, GetKeyDefault())
 }
 
-func GetCoseVerifier() (cose.Verifier, error) {
-	return cose.NewVerifier(cose.AlgorithmES256, GetKey().Public())
+func GetCoseSignerFor(alg cose.Algorithm, key crypto.Signer) (cose.Signer, error) {
+	return cose.NewSigner(alg, key)
+}
+
+func GetCoseVerifierDefault() (cose.Verifier, error) {
+	return GetCoseVerifierFor(cose.AlgorithmES256, GetKeyDefault().Public())
+}
+
+func GetCoseVerifierFor(alg cose.Algorithm, pubKey crypto.PublicKey) (cose.Verifier, error) {
+	return cose.NewVerifier(alg, pubKey)
 }
