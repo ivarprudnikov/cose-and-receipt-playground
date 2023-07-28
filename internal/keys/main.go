@@ -6,6 +6,7 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/x509"
+	"log"
 	"os"
 
 	"github.com/veraison/go-cose"
@@ -23,8 +24,13 @@ func init() {
 	filename := SHARED_DIR + "/generated.ecdsa.key"
 	if _, err = os.Stat(filename); err == nil {
 		keyBytes, err = os.ReadFile(filename)
-		if err != nil {
-			privateKey, _ = x509.ParseECPrivateKey(keyBytes)
+		if err == nil {
+			privateKey, err = x509.ParseECPrivateKey(keyBytes)
+			if err != nil {
+				log.Printf("Failed to parse private key: %s", err.Error())
+			}
+		} else {
+			log.Printf("Failed to read private key file: %s", err.Error())
 		}
 	}
 
