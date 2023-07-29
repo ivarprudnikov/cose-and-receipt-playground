@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/ivarprudnikov/cose-and-receipt-playground/internal/keys"
 	"github.com/veraison/go-cose"
@@ -14,6 +15,8 @@ import (
 
 // https://datatracker.ietf.org/doc/draft-ietf-scitt-architecture/
 const ISSUER_HEADER_KEY = int64(391)
+const ISSUER_HEADER_FEED = int64(392)
+const ISSUER_HEADER_REG_INFO = int64(393)
 
 func CreateSignature(payload []byte, hostport string) ([]byte, error) {
 	hostport = strings.ReplaceAll(hostport, ":", "%3A")
@@ -28,6 +31,12 @@ func CreateSignature(payload []byte, hostport string) ([]byte, error) {
 			cose.HeaderLabelContentType: "text/plain",
 			cose.HeaderLabelKeyID:       []byte("#" + keys.GetPublicKeyIdDefault()),
 			ISSUER_HEADER_KEY:           "did:web:" + hostport,
+			ISSUER_HEADER_FEED:          "demo",
+			ISSUER_HEADER_REG_INFO: map[interface{}]interface{}{
+				"register_by": uint64(time.Now().Add(24 * time.Hour).Unix()),
+				"sequence_no": uint64(1),
+				"issuance_ts": uint64(time.Now().Unix()),
+			},
 		},
 	}
 	// sign and marshal message
