@@ -5,7 +5,9 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
+	"crypto/sha256"
 	"crypto/x509"
+	"encoding/hex"
 	"log"
 	"os"
 
@@ -50,6 +52,15 @@ func init() {
 
 func GetKeyDefault() *ecdsa.PrivateKey {
 	return privateKey
+}
+
+func GetPublicKeyIdDefault() string {
+	derCert, err := x509.MarshalPKIXPublicKey(GetKeyDefault().Public())
+	if err != nil {
+		panic(err)
+	}
+	certHash := sha256.Sum256(derCert)
+	return hex.EncodeToString(certHash[:])
 }
 
 func GetCoseSignerDefault() (cose.Signer, error) {

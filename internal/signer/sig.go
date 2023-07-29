@@ -26,7 +26,7 @@ func CreateSignature(payload []byte, hostport string) ([]byte, error) {
 		Protected: cose.ProtectedHeader{
 			cose.HeaderLabelAlgorithm:   cose.AlgorithmES256,
 			cose.HeaderLabelContentType: "text/plain",
-			cose.HeaderLabelKeyID:       []byte("#" + keys.KEY_ID),
+			cose.HeaderLabelKeyID:       []byte("#" + keys.GetPublicKeyIdDefault()),
 			ISSUER_HEADER_KEY:           "did:web:" + hostport,
 		},
 	}

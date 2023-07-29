@@ -35,7 +35,7 @@ func GetCountersignHeaders(hostport string) cose.Headers {
 	return cose.Headers{
 		Protected: cose.ProtectedHeader{
 			cose.HeaderLabelAlgorithm: cose.AlgorithmES256,
-			cose.HeaderLabelKeyID:     []byte("#" + keys.KEY_ID),
+			cose.HeaderLabelKeyID:     []byte("#" + keys.GetPublicKeyIdDefault()),
 			signer.ISSUER_HEADER_KEY:  "did:web:" + strings.ReplaceAll(hostport, ":", "%3A"),
 		},
 	}

@@ -50,7 +50,7 @@ func Test_Countersign(t *testing.T) {
 	require.NotNil(t, msg)
 	require.NotEmpty(t, msg.Headers.Protected)
 	require.Equal(t, cose.AlgorithmES256, msg.Headers.Protected[cose.HeaderLabelAlgorithm])
-	require.Equal(t, []byte("#"+keys.KEY_ID), msg.Headers.Protected[cose.HeaderLabelKeyID])
+	require.Equal(t, []byte("#"+keys.GetPublicKeyIdDefault()), msg.Headers.Protected[cose.HeaderLabelKeyID])
 	require.Equal(t, "did:web:localhost", msg.Headers.Protected[signer.ISSUER_HEADER_KEY])
 	require.Empty(t, msg.Payload)
 	require.NotEmpty(t, msg.Signature)
