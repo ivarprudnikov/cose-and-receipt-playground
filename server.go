@@ -46,7 +46,7 @@ func didHandler(w http.ResponseWriter, r *http.Request) {
 
 // sigCreateHandler creates a signature for a payload provided in the request
 func sigCreateHandler(w http.ResponseWriter, r *http.Request) {
-	err := r.ParseForm()
+	err := r.ParseMultipartForm(MAX_FORM_SIZE)
 	if err != nil {
 		sendError(w, "failed to read request body parameters", err)
 		return
