@@ -14,7 +14,7 @@ import (
 )
 
 func Test_Create_Sig(t *testing.T) {
-	sig, err := signer.CreateSignature([]byte("hello world"), "foo.bar.com")
+	sig, err := signer.CreateSignature([]byte("hello world"), "foo/bar", "foo.bar.com")
 	require.NoError(t, err)
 	require.NotNil(t, sig)
 
@@ -23,7 +23,7 @@ func Test_Create_Sig(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Equal(t, msg.Headers.Protected[cose.HeaderLabelAlgorithm], interface{}(cose.AlgorithmES256))
-	require.Equal(t, msg.Headers.Protected[cose.HeaderLabelContentType], interface{}("text/plain"))
+	require.Equal(t, msg.Headers.Protected[cose.HeaderLabelContentType], interface{}("foo/bar"))
 	kid, ok := msg.Headers.Protected[cose.HeaderLabelKeyID].([]byte)
 	require.True(t, ok)
 	require.Equal(t, kid[0], byte('#'))
@@ -37,7 +37,7 @@ func Test_Create_Sig(t *testing.T) {
 }
 
 func Test_Create_Verify_with_default_key(t *testing.T) {
-	sig, err := signer.CreateSignature([]byte("hello world"), "foo.bar.com")
+	sig, err := signer.CreateSignature([]byte("hello world"), "foo/bar", "foo.bar.com")
 	require.NoError(t, err)
 
 	var msg cose.Sign1Message
@@ -61,7 +61,7 @@ func Test_Create_Verify_with_did(t *testing.T) {
 
 	serverUrl := strings.TrimPrefix(tlsServer.URL, "https://")
 
-	sig, err := signer.CreateSignature([]byte("hello world"), serverUrl)
+	sig, err := signer.CreateSignature([]byte("hello world"), "foo/bar", serverUrl)
 	require.NoError(t, err)
 
 	err = signer.VerifySignature(sig, tlsServer.Client())

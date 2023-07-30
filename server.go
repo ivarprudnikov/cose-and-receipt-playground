@@ -11,6 +11,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 
 	"github.com/ivarprudnikov/cose-and-receipt-playground/internal/countersigner"
 	"github.com/ivarprudnikov/cose-and-receipt-playground/internal/keys"
@@ -50,6 +51,10 @@ func sigCreateHandler(w http.ResponseWriter, r *http.Request) {
 		sendError(w, "failed to read request body parameters", err)
 		return
 	}
+	contentType := r.PostForm.Get("contenttype")
+	if strings.Trim(contentType, " ") == "" {
+		contentType = "text/plain"
+	}
 	payload := r.PostForm.Get("payload")
 	if payload == "" {
 		sendError(w, "payload is empty", nil)
@@ -58,7 +63,7 @@ func sigCreateHandler(w http.ResponseWriter, r *http.Request) {
 	payloadHash := sha256.Sum256([]byte(payload))
 	payloadHashHex := hex.EncodeToString(payloadHash[:])
 
-	signature, err := signer.CreateSignature([]byte(payload), getHostPort())
+	signature, err := signer.CreateSignature([]byte(payload), contentType, getHostPort())
 	if err != nil {
 		sendError(w, "failed to create signature", err)
 		return

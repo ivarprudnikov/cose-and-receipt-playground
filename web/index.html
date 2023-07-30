@@ -59,6 +59,11 @@
                   <div id="payloadHelp" class="form-text">Payload will get embedded in the COSE_Sign1 signature envelope. The
                     generated private key will be used to sign.</div>
                 </div>
+                <div class="mb-3">
+                  <label for="contenttype" class="form-label">Content type</label>
+                  <input name="contenttype" class="form-control" aria-describedby="contenttypeHelp" id="contenttype" placeholder="text/plain"></input>
+                  <div id="contenttypeHelp" class="form-text">Content type of the payload to add to the headers, defaults to "text/plain"</div>
+                </div>
               </fieldset>
               <button type="submit" class="btn btn-primary">Create and download signature</button>
             </form>

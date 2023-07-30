@@ -18,7 +18,7 @@ const ISSUER_HEADER_KEY = int64(391)
 const ISSUER_HEADER_FEED = int64(392)
 const ISSUER_HEADER_REG_INFO = int64(393)
 
-func CreateSignature(payload []byte, hostport string) ([]byte, error) {
+func CreateSignature(payload []byte, contentType string, hostport string) ([]byte, error) {
 	hostport = strings.ReplaceAll(hostport, ":", "%3A")
 	signer, err := keys.GetCoseSignerDefault()
 	if err != nil {
@@ -28,7 +28,7 @@ func CreateSignature(payload []byte, hostport string) ([]byte, error) {
 	headers := cose.Headers{
 		Protected: cose.ProtectedHeader{
 			cose.HeaderLabelAlgorithm:   cose.AlgorithmES256,
-			cose.HeaderLabelContentType: "text/plain",
+			cose.HeaderLabelContentType: contentType,
 			cose.HeaderLabelKeyID:       []byte("#" + keys.GetPublicKeyIdDefault()),
 			ISSUER_HEADER_KEY:           "did:web:" + hostport,
 			ISSUER_HEADER_FEED:          "demo",
