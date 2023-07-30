@@ -1,6 +1,8 @@
 package countersigner_test
 
 import (
+	"encoding/hex"
+	"fmt"
 	"testing"
 
 	"github.com/ivarprudnikov/cose-and-receipt-playground/internal/countersigner"
@@ -57,34 +59,46 @@ func Test_Countersign(t *testing.T) {
 }
 
 func Test_Countersign_embedded(t *testing.T) {
-	original := cose.NewSign1Message()
-	original.Headers.Protected[cose.HeaderLabelAlgorithm] = cose.AlgorithmES256
-	original.Signature = []byte("signature")
 
-	embedded_b, err := countersigner.Countersign(*original, "localhost", true)
-	require.NoError(t, err)
-	require.NotEmpty(t, embedded_b)
+	msg1 := cose.NewSign1Message()
+	msg1.Headers.Protected[cose.HeaderLabelAlgorithm] = cose.AlgorithmES256
+	msg1.Signature = []byte("signature")
 
-	var embedded cose.Sign1Message
-	err = embedded.UnmarshalCBOR(embedded_b)
+	msg2_hex := "d28458c7a60126036a746578742f706c61696e045841233936396437353463363164626465323665356236353237663136383938663630646266636137613937303736356432343437336337323563613366343933643119018778346469643a7765623a706c617967726f756e642d636f73652d6561737475732d6170692e617a75726577656273697465732e6e65741901886464656d6f190189a36b69737375616e63655f74731a64c68f666b72656769737465725f62791a64c7e0e66b73657175656e63655f6e6f01a04566726f646f58402dc4667f6ab8fdc71835552ca7ae90ff8067f4f971516ecf81bf81afabea2d7844e2aab8eea7ea4776c5676830a157229e25b4370de6f9462705f8e67e6266cc"
+	msg2_b, err := hex.DecodeString(msg2_hex)
 	require.NoError(t, err)
-	require.NotNil(t, embedded)
-	require.NotEmpty(t, embedded.Headers.Unprotected)
-	receipt_raw := embedded.Headers.Unprotected[countersigner.COSE_Countersignature_header]
-	require.NotNil(t, receipt_raw)
-	receipt_b, ok := receipt_raw.([]byte)
-	require.True(t, ok, "receipt bytes")
+	var msg2 cose.Sign1Message
+	msg2.UnmarshalCBOR(msg2_b)
 
-	var receipt cose.Sign1Message
-	err = receipt.UnmarshalCBOR(receipt_b)
-	require.NoError(t, err)
-	require.NotNil(t, receipt)
-	require.NotEmpty(t, receipt.Headers.Protected)
-	require.Equal(t, cose.AlgorithmES256, receipt.Headers.Protected[cose.HeaderLabelAlgorithm])
-	require.Equal(t, []byte("#"+keys.GetPublicKeyIdDefault()), receipt.Headers.Protected[cose.HeaderLabelKeyID])
-	require.Equal(t, "did:web:localhost", receipt.Headers.Protected[signer.ISSUER_HEADER_KEY])
-	require.Empty(t, receipt.Payload)
-	require.NotEmpty(t, receipt.Signature)
+	for idx, original := range []cose.Sign1Message{*msg1, msg2} {
+		t.Run(fmt.Sprintf("embedded message %d", idx), func(t *testing.T) {
+			embedded_b, err := countersigner.Countersign(original, "localhost", true)
+			require.NoError(t, err)
+			require.NotEmpty(t, embedded_b)
+
+			var embedded cose.Sign1Message
+			err = embedded.UnmarshalCBOR(embedded_b)
+			require.NoError(t, err)
+			require.NotNil(t, embedded)
+			require.NotEmpty(t, embedded.Headers.Unprotected)
+			receipt_raw := embedded.Headers.Unprotected[countersigner.COSE_Countersignature_header]
+			require.NotNil(t, receipt_raw)
+			receipt_b, ok := receipt_raw.([]byte)
+			require.True(t, ok, "receipt bytes")
+
+			var receipt cose.Sign1Message
+			err = receipt.UnmarshalCBOR(receipt_b)
+			require.NoError(t, err)
+			require.NotNil(t, receipt)
+			require.NotEmpty(t, receipt.Headers.Protected)
+			require.Equal(t, cose.AlgorithmES256, receipt.Headers.Protected[cose.HeaderLabelAlgorithm])
+			require.Equal(t, []byte("#"+keys.GetPublicKeyIdDefault()), receipt.Headers.Protected[cose.HeaderLabelKeyID])
+			require.Equal(t, "did:web:localhost", receipt.Headers.Protected[signer.ISSUER_HEADER_KEY])
+			require.Empty(t, receipt.Payload)
+			require.NotEmpty(t, receipt.Signature)
+		})
+	}
+
 }
 
 func Test_countersign_then_verify(t *testing.T) {
