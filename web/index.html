@@ -28,113 +28,164 @@
       </ul>
     </header>
 
+    <h2>Signatures</h2>
+
     <div class="row">
       <div class="col-md-6">
 
-        <h2 id="createsig">Create signature</h2>
+        <h3 id="createsig">Create new</h3>
         <p>Signature will contain a DID issuer header which will point back to the did document hosted here <a
             href=".well-known/did.json">.well-known/did.json</a></p>
+        <p>There will also be a payload wrapped inside along with a header indicating the content type of the payload (text/plain).</p>
+        
+        <ul class="nav nav-tabs" role="tablist">
+          <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="sig-new-form-tab" data-bs-toggle="tab" data-bs-target="#sig-new-form" type="button" role="tab" aria-controls="sig-new-form" aria-selected="true">Form</button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="sig-new-curl-tab" data-bs-toggle="tab" data-bs-target="#sig-new-curl" type="button" role="tab" aria-controls="sig-new-curl" aria-selected="false">cURL</button>
+          </li>
+        </ul>
+        <div class="tab-content">
 
-        <form id="sign" name="sign" action="/signature/create" method="POST">
-          <fieldset>
-            <legend>Provide payload</legend>
-            <div class="mb-3">
-              <label for="payload" class="form-label">Payload</label>
-              <textarea name="payload" class="form-control" aria-describedby="payloadHelp" id="payload" cols="30"
-                rows="8" placeholder="any text or json or else"></textarea>
-              <div id="payloadHelp" class="form-text">Payload will get embedded in the COSE_Sign1 signature envelope. The
-                generated private key will be used to sign.</div>
+          <div class="tab-pane fade show active" id="sig-new-form" role="tabpanel" aria-labelledby="sig-new-form-tab">
+            <form id="sign" class="my-4" name="sign" action="/signature/create" method="POST">
+              <fieldset>
+                <legend>Provide payload</legend>
+                <div class="mb-3">
+                  <label for="payload" class="form-label">Payload</label>
+                  <textarea name="payload" class="form-control" aria-describedby="payloadHelp" id="payload" cols="30"
+                    rows="4" placeholder="any text or json or else"></textarea>
+                  <div id="payloadHelp" class="form-text">Payload will get embedded in the COSE_Sign1 signature envelope. The
+                    generated private key will be used to sign.</div>
+                </div>
+              </fieldset>
+              <button type="submit" class="btn btn-primary">Create and download signature</button>
+            </form>
+          </div>
+
+          <div class="tab-pane fade" id="sig-new-curl" role="tabpanel" aria-labelledby="sig-new-curl-tab">
+            <div class="card text-bg-light my-4">
+              <div class="card-header">Create with cURL</div>
+              <div class="card-body">
+                <pre class="card-text">curl -L 'https://playground-cose-eastus-api.azurewebsites.net/signature/create' -X POST \
+                  -H 'Content-Type: application/x-www-form-urlencoded' \
+                  --data-raw 'payload=xxx' \
+                  -o signature.cose</pre>
+              </div>
             </div>
-          </fieldset>
-          <button type="submit" class="btn btn-primary">Create and download signature</button>
-        </form>
-
-        <div class="card text-bg-light my-4">
-          <div class="card-header">Create with cURL</div>
-          <div class="card-body">
-            <pre class="card-text">curl -L 'https://playground-cose-eastus-api.azurewebsites.net/signature/create' -X POST \
-              -H 'Content-Type: application/x-www-form-urlencoded' \
-              --data-raw 'payload=xxx' \
-              -o signature.cose</pre>
           </div>
         </div>
 
       </div>
       <div class="col-md-6">
 
-        <h2 id="verifysig">Verify signature</h2>
+        <h3 id="verifysig">Verify</h3>
 
         <p>Verification will download did:web keys from the given signature issuer and 
           will validate the signature against it.</p>
+        
+        <ul class="nav nav-tabs" role="tablist">
+          <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="sig-verify-form-tab" data-bs-toggle="tab" data-bs-target="#sig-verify-form" type="button" role="tab" aria-controls="sig-verify-form" aria-selected="true">Form</button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="sig-verify-curl-tab" data-bs-toggle="tab" data-bs-target="#sig-verify-curl" type="button" role="tab" aria-controls="sig-verify-curl" aria-selected="false">cURL</button>
+          </li>
+        </ul>
+        <div class="tab-content">
 
-        <form id="verify" name="verify" action="/signature/verify" method="POST" enctype="multipart/form-data">
-          <fieldset>
-            <legend>Provide signature</legend>
-            <div class="mb-3">
-              <label for="signaturefile" class="form-label">Signature file</label>
-              <input type="file" name="signaturefile" class="form-control" aria-describedby="signaturefileHelp"
-                id="signaturefile" />
-              <div id="signaturefileHelp" class="form-text">Attach the cose file if you have it</div>
+          <div class="tab-pane fade show active" id="sig-verify-form" role="tabpanel" aria-labelledby="sig-verify-form-tab">
+            <form id="verify" class="my-4" name="verify" action="/signature/verify" method="POST" enctype="multipart/form-data">
+              <fieldset>
+                <legend>Provide signature</legend>
+                <div class="mb-3">
+                  <label for="signaturefile" class="form-label">Signature file</label>
+                  <input type="file" name="signaturefile" class="form-control" aria-describedby="signaturefileHelp"
+                    id="signaturefile" />
+                  <div id="signaturefileHelp" class="form-text">Attach the cose file if you have it</div>
+                </div>
+                <div class="mb-3">
+                  <label for="signaturehex" class="form-label">Signature HEX</label>
+                  <textarea name="signaturehex" class="form-control" aria-describedby="signaturehexHelp" id="signaturehex"
+                    cols="30" rows="2" placeholder='d2845828a301260446666f6f62617219018758186...'></textarea>
+                  <div id="signaturehexHelp" class="form-text">If you do not have a file but know the signature representation in HEX then use this field</div>
+                </div>
+              </fieldset>
+              <button type="submit" class="btn btn-primary">Verify signature</button>
+            </form>
+          </div>
+          
+          <div class="tab-pane fade" id="sig-verify-curl" role="tabpanel" aria-labelledby="sig-verify-curl-tab">
+            <div class="card text-bg-light my-4">
+              <div class="card-header">Verify with cURL</div>
+              <div class="card-body">
+                <p class="card-text">Using a file:</p>
+                <pre class="card-text">curl -L 'https://playground-cose-eastus-api.azurewebsites.net/signature/verify' -X POST \
+                  --form signaturefile='@./my/signature/file.cose'</pre>
+                <p class="card-text">Using a hex value:</p>
+                <pre class="card-text">curl -L 'https://playground-cose-eastus-api.azurewebsites.net/signature/verify' -X POST \
+                  --form signaturehex='d2845828a301260446666f6f62617219018758186469643a7765623a6c6f63616c686f737425334137303731a04378787858401155407c3e8c4393010512973c333f2d6683a13eeec2a1baa794fb88f2d2e8e0de5e77d970c1ba3ad15c3742ae9189a76072fae019e46f15c0e1d6a528b58f5b'</pre>
+              </div>
             </div>
-            <div class="mb-3">
-              <label for="signaturehex" class="form-label">Signature HEX</label>
-              <textarea name="signaturehex" class="form-control" aria-describedby="signaturehexHelp" id="signaturehex"
-                cols="30" rows="4" placeholder='d2845828a301260446666f6f62617219018758186469643a7765623a6c6f63616c686f737425334137303731a04378787858401155407c3e8c4393010512973c333f2d6683a13eeec2a1baa794fb88f2d2e8e0de5e77d970c1ba3ad15c3742ae9189a76072fae019e46f15c0e1d6a528b58f5b'></textarea>
-              <div id="signaturehexHelp" class="form-text">If you do not have a file but know the signature representation in HEX then use this field</div>
-            </div>
-          </fieldset>
-          <button type="submit" class="btn btn-primary">Verify signature</button>
-        </form>
-
-        <div class="card text-bg-light my-4">
-          <div class="card-header">Verify with cURL</div>
-          <div class="card-body">
-            <p class="card-text">Using a file:</p>
-            <pre class="card-text">curl -L 'https://playground-cose-eastus-api.azurewebsites.net/signature/verify' -X POST \
-              --form signaturefile='@./my/signature/file.cose'</pre>
-            <p class="card-text">Using a hex value:</p>
-            <pre class="card-text">curl -L 'https://playground-cose-eastus-api.azurewebsites.net/signature/verify' -X POST \
-              --form signaturehex='d2845828a301260446666f6f62617219018758186469643a7765623a6c6f63616c686f737425334137303731a04378787858401155407c3e8c4393010512973c333f2d6683a13eeec2a1baa794fb88f2d2e8e0de5e77d970c1ba3ad15c3742ae9189a76072fae019e46f15c0e1d6a528b58f5b'</pre>
           </div>
         </div>
+
       </div>
     </div>
 
     <hr>
 
+    <h2>Countersigning and receipts</h2>
+
     <div class="row">
       <div class="col-md-6">
 
-        <h2 id="createreceipt">Countersign signature (generate receipt)</h2>
+        <h3 id="createreceipt">Countersign</h3>
 
-        <form id="countersign" name="countersign" action="/receipt/create" method="POST" enctype="multipart/form-data">
-          <fieldset>
-            <legend>Provide signature</legend>
-            <div class="mb-3">
-              <label for="signaturefile" class="form-label">Signature file</label>
-              <input type="file" name="signaturefile" class="form-control" aria-describedby="signaturefileHelp"
-                id="signaturefile" />
-              <div id="signaturefileHelp" class="form-text">Attach the cose file if you have it</div>
-            </div>
-            <div class="mb-3">
-              <label for="signaturehex" class="form-label">Signature HEX</label>
-              <textarea name="signaturehex" class="form-control" aria-describedby="signaturehexHelp" id="signaturehex"
-                cols="30" rows="4" placeholder='d2845828a301260446666f6f62617219018758186469643a7765623a6c6f63616c686f737425334137303731a04378787858401155407c3e8c4393010512973c333f2d6683a13eeec2a1baa794fb88f2d2e8e0de5e77d970c1ba3ad15c3742ae9189a76072fae019e46f15c0e1d6a528b58f5b'></textarea>
-              <div id="signaturehexHelp" class="form-text">If you do not have a file but know the signature representation in HEX then use this field</div>
-            </div>
-          </fieldset>
-          <button type="submit" class="btn btn-primary">Countersign</button>
-        </form>
+        <ul class="nav nav-tabs" role="tablist">
+          <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="receipt-new-form-tab" data-bs-toggle="tab" data-bs-target="#receipt-new-form" type="button" role="tab" aria-controls="receipt-new-form" aria-selected="true">Form</button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="receipt-new-curl-tab" data-bs-toggle="tab" data-bs-target="#receipt-new-curl" type="button" role="tab" aria-controls="receipt-new-curl" aria-selected="false">cURL</button>
+          </li>
+        </ul>
+        <div class="tab-content">
 
-        <div class="card text-bg-light my-4">
-          <div class="card-header">Countersign with cURL</div>
-          <div class="card-body">
-            <p class="card-text">Using a file:</p>
-            <pre class="card-text">curl -L 'https://playground-cose-eastus-api.azurewebsites.net/receipt/create' -X POST \
-              --form signaturefile='@./my/signature/file.cose'</pre>
-            <p class="card-text">Using a hex value:</p>
-            <pre class="card-text">curl -L 'https://playground-cose-eastus-api.azurewebsites.net/receipt/create' -X POST \
-              --form signaturehex='d2845828a301260446666f6f62617219018758186469643a7765623a6c6f63616c686f737425334137303731a04378787858401155407c3e8c4393010512973c333f2d6683a13eeec2a1baa794fb88f2d2e8e0de5e77d970c1ba3ad15c3742ae9189a76072fae019e46f15c0e1d6a528b58f5b'</pre>
+          <div class="tab-pane fade show active" id="receipt-new-form" role="tabpanel" aria-labelledby="receipt-new-form-tab">
+            <form id="countersign" class="my-4" name="countersign" action="/receipt/create" method="POST" enctype="multipart/form-data">
+              <fieldset>
+                <legend>Provide signature</legend>
+                <div class="mb-3">
+                  <label for="signaturefile" class="form-label">Signature file</label>
+                  <input type="file" name="signaturefile" class="form-control" aria-describedby="signaturefileHelp"
+                    id="signaturefile" />
+                  <div id="signaturefileHelp" class="form-text">Attach the cose file if you have it</div>
+                </div>
+                <div class="mb-3">
+                  <label for="signaturehex" class="form-label">Signature HEX</label>
+                  <textarea name="signaturehex" class="form-control" aria-describedby="signaturehexHelp" id="signaturehex"
+                    cols="30" rows="2" placeholder='d2845828a301260446666f6f62617219018758186...'></textarea>
+                  <div id="signaturehexHelp" class="form-text">If you do not have a file but know the signature representation in HEX then use this field</div>
+                </div>
+              </fieldset>
+              <button type="submit" class="btn btn-primary">Countersign and download receipt</button>
+            </form>
+          </div>
+          
+          <div class="tab-pane fade" id="receipt-new-curl" role="tabpanel" aria-labelledby="receipt-new-curl-tab">
+            <div class="card text-bg-light my-4">
+              <div class="card-header">Countersign with cURL</div>
+              <div class="card-body">
+                <p class="card-text">Using a file:</p>
+                <pre class="card-text">curl -L 'https://playground-cose-eastus-api.azurewebsites.net/receipt/create' -X POST \
+                  --form signaturefile='@./my/signature/file.cose'</pre>
+                <p class="card-text">Using a hex value:</p>
+                <pre class="card-text">curl -L 'https://playground-cose-eastus-api.azurewebsites.net/receipt/create' -X POST \
+                  --form signaturehex='d2845828a301260446666f6f62617219018758186469643a7765623a6c6f63616c686f737425334137303731a04378787858401155407c3e8c4393010512973c333f2d6683a13eeec2a1baa794fb88f2d2e8e0de5e77d970c1ba3ad15c3742ae9189a76072fae019e46f15c0e1d6a528b58f5b'</pre>
+              </div>
+            </div>    
           </div>
         </div>
 
@@ -142,55 +193,71 @@
 
       <div class="col-md-6">
 
-        <h2 id="verifyreceipt">Verify receipt</h2>
+        <h3 id="verifyreceipt">Verify</h3>
 
-        <form id="verifyreceipt" name="verifyreceipt" action="/receipt/verify" method="POST" enctype="multipart/form-data">
-          <fieldset>
-            <legend>Provide signature</legend>
-            <div class="mb-3">
-              <label for="signaturefile" class="form-label">Signature file</label>
-              <input type="file" name="signaturefile" class="form-control" aria-describedby="signaturefileHelp"
-                id="signaturefile" />
-              <div id="signaturefileHelp" class="form-text">Attach the cose file if you have it</div>
-            </div>
-            <div class="mb-3">
-              <label for="signaturehex" class="form-label">Signature HEX</label>
-              <textarea name="signaturehex" class="form-control" aria-describedby="signaturehexHelp" id="signaturehex"
-                cols="30" rows="4" placeholder='d2845828a301260446666f6f62617219018758186469643a7765623a6c6f63616c686f737425334137303731a04378787858401155407c3e8c4393010512973c333f2d6683a13eeec2a1baa794fb88f2d2e8e0de5e77d970c1ba3ad15c3742ae9189a76072fae019e46f15c0e1d6a528b58f5b'></textarea>
-              <div id="signaturehexHelp" class="form-text">If you do not have a file but know the signature representation in HEX then use this field</div>
-            </div>
-          </fieldset>
-          <fieldset>
-            <legend>Provide receipt</legend>
-            <div class="mb-3">
-              <label for="receiptfile" class="form-label">Receipt file</label>
-              <input type="file" name="receiptfile" class="form-control" aria-describedby="receiptfileHelp"
-                id="receiptfile" />
-              <div id="receiptfileHelp" class="form-text">Attach the cose file if you have it</div>
-            </div>
-            <div class="mb-3">
-              <label for="receipthex" class="form-label">Receipt HEX</label>
-              <textarea name="receipthex" class="form-control" aria-describedby="receipthexHelp" id="receipthex"
-                cols="30" rows="4" placeholder='d2845828a301260446666f6f62617219018758186469643a7765623a6c6f63616c686f737425334137303731a04378787858401155407c3e8c4393010512973c333f2d6683a13eeec2a1baa794fb88f2d2e8e0de5e77d970c1ba3ad15c3742ae9189a76072fae019e46f15c0e1d6a528b58f5b'></textarea>
-              <div id="receipthexHelp" class="form-text">If you do not have a file but know the representation in HEX then use this field</div>
-            </div>
-          </fieldset>
-          <button type="submit" class="btn btn-primary">Verify</button>
-        </form>
+        <ul class="nav nav-tabs" role="tablist">
+          <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="receipt-verify-form-tab" data-bs-toggle="tab" data-bs-target="#receipt-verify-form" type="button" role="tab" aria-controls="receipt-verify-form" aria-selected="true">Form</button>
+          </li>
+          <li class="nav-item" role="presentation">
+            <button class="nav-link" id="receipt-verify-curl-tab" data-bs-toggle="tab" data-bs-target="#receipt-verify-curl" type="button" role="tab" aria-controls="receipt-verify-curl" aria-selected="false">cURL</button>
+          </li>
+        </ul>
+        <div class="tab-content">
 
-        <div class="card text-bg-light my-4">
-          <div class="card-header">Verify with cURL</div>
-          <div class="card-body">
-            <p class="card-text">Using a file:</p>
-            <pre class="card-text">curl -L 'https://playground-cose-eastus-api.azurewebsites.net/receipt/verify' -X POST \
-              --form signaturefile='@./my/signature/file.cose'
-              --form receiptfile='@./my/signature/receipt.cbor'</pre>
-            <p class="card-text">Using a hex value:</p>
-            <pre class="card-text">curl -L 'https://playground-cose-eastus-api.azurewebsites.net/receipt/verify' -X POST \
-              --form signaturehex='d2845828a301260446666f6f...17219018758186469643a77'
-              --form receipthex='d2845828a301260446666f6f...17219018758186469643a77'</pre>
+          <div class="tab-pane fade show active" id="receipt-verify-form" role="tabpanel" aria-labelledby="receipt-verify-form-tab">
+            <form id="verifyreceipt" class="my-4" name="verifyreceipt" action="/receipt/verify" method="POST" enctype="multipart/form-data">
+              <fieldset>
+                <legend>Provide signature</legend>
+                <div class="mb-3">
+                  <label for="signaturefile" class="form-label">Signature file</label>
+                  <input type="file" name="signaturefile" class="form-control" aria-describedby="signaturefileHelp"
+                    id="signaturefile" />
+                  <div id="signaturefileHelp" class="form-text">Attach the cose file if you have it</div>
+                </div>
+                <div class="mb-3">
+                  <label for="signaturehex" class="form-label">Signature HEX</label>
+                  <textarea name="signaturehex" class="form-control" aria-describedby="signaturehexHelp" id="signaturehex"
+                    cols="30" rows="2" placeholder='d2845828a301260446666f6f62617219018758186...'></textarea>
+                  <div id="signaturehexHelp" class="form-text">If you do not have a file but know the signature representation in HEX then use this field</div>
+                </div>
+              </fieldset>
+              <fieldset>
+                <legend>Provide receipt</legend>
+                <div class="mb-3">
+                  <label for="receiptfile" class="form-label">Receipt file</label>
+                  <input type="file" name="receiptfile" class="form-control" aria-describedby="receiptfileHelp"
+                    id="receiptfile" />
+                  <div id="receiptfileHelp" class="form-text">Attach the cose file if you have it</div>
+                </div>
+                <div class="mb-3">
+                  <label for="receipthex" class="form-label">Receipt HEX</label>
+                  <textarea name="receipthex" class="form-control" aria-describedby="receipthexHelp" id="receipthex"
+                    cols="30" rows="2" placeholder='d2845828a301260446666f6f62617219018758186...'></textarea>
+                  <div id="receipthexHelp" class="form-text">If you do not have a file but know the representation in HEX then use this field</div>
+                </div>
+              </fieldset>
+              <button type="submit" class="btn btn-primary">Verify signature receipt</button>
+            </form>
+          </div>
+          
+          <div class="tab-pane fade" id="receipt-verify-curl" role="tabpanel" aria-labelledby="receipt-verify-curl-tab">
+            <div class="card text-bg-light my-4">
+              <div class="card-header">Verify with cURL</div>
+              <div class="card-body">
+                <p class="card-text">Using a file:</p>
+                <pre class="card-text">curl -L 'https://playground-cose-eastus-api.azurewebsites.net/receipt/verify' -X POST \
+                  --form signaturefile='@./my/signature/file.cose'
+                  --form receiptfile='@./my/signature/receipt.cbor'</pre>
+                <p class="card-text">Using a hex value:</p>
+                <pre class="card-text">curl -L 'https://playground-cose-eastus-api.azurewebsites.net/receipt/verify' -X POST \
+                  --form signaturehex='d2845828a301260446666f6f...17219018758186469643a77'
+                  --form receipthex='d2845828a301260446666f6f...17219018758186469643a77'</pre>
+              </div>
+            </div>
           </div>
         </div>
+        
       </div>
     </div>
 
