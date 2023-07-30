@@ -98,11 +98,18 @@ func sigVerifyHandler(w http.ResponseWriter, r *http.Request) {
 
 // receiptCreateHandler creates a receipt for a signature provided in the request
 func receiptCreateHandler(w http.ResponseWriter, r *http.Request) {
+	STANDALONE := "standalone"
+
 	signature, err := readBytesFromForm(r, "signaturefile", "signaturehex")
 	if err != nil {
 		sendError(w, "failed to read signature", err)
 		return
 	}
+	receiptType := r.PostForm.Get("receipttype")
+	if receiptType == "" {
+		receiptType = STANDALONE
+	}
+
 	err = signer.VerifySignature(signature, nil)
 	if err != nil {
 		sendError(w, "failed to verify signature", err)
@@ -116,7 +123,7 @@ func receiptCreateHandler(w http.ResponseWriter, r *http.Request) {
 		sendError(w, "failed to unmarshal signature bytes", err)
 		return
 	}
-	receipt, err := countersigner.Countersign(msg, getHostPort())
+	receipt, err := countersigner.Countersign(msg, getHostPort(), receiptType != STANDALONE)
 	if err != nil {
 		sendError(w, "failed to countersign", err)
 		return

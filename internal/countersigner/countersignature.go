@@ -2,6 +2,8 @@ package countersigner
 
 import (
 	"crypto/rand"
+	"encoding/hex"
+	"log"
 	"strings"
 
 	"github.com/fxamacker/cbor/v2"
@@ -42,7 +44,7 @@ func GetCountersignHeaders(hostport string) cose.Headers {
 }
 
 // Using full COSE_Countersignature aka cose.Sign1Message
-func Countersign(target cose.Sign1Message, hostport string) ([]byte, error) {
+func Countersign(target cose.Sign1Message, hostport string, embedInSignature bool) ([]byte, error) {
 	signer, err := keys.GetCoseSignerDefault()
 	if err != nil {
 		return nil, err
@@ -61,7 +63,25 @@ func Countersign(target cose.Sign1Message, hostport string) ([]byte, error) {
 	}
 	cs.Signature = tbsSig
 
-	return cs.MarshalCBOR()
+	cs_b, err := cs.MarshalCBOR()
+	if err != nil {
+		return nil, err
+	}
+
+	if !embedInSignature {
+		return cs_b, nil
+	}
+
+	log.Println(hex.EncodeToString(cs_b))
+
+	var unprotected cose.UnprotectedHeader = target.Headers.Unprotected
+	if unprotected == nil {
+		unprotected = cose.UnprotectedHeader{}
+	}
+
+	unprotected[COSE_Countersignature_header] = cs_b
+	target.Headers.Unprotected = unprotected
+	return target.MarshalCBOR()
 }
 
 func Verify(countersignature cose.Sign1Message, target cose.Sign1Message) error {

@@ -175,6 +175,17 @@
                   <div id="signaturehexHelp" class="form-text">If you do not have a file but know the signature representation in HEX then use this field</div>
                 </div>
               </fieldset>
+              <fieldset>
+                <legend>Receipt output</legend>
+                <div class="mb-3">
+                  <label for="receiptType" class="form-label">Receipt type</label>
+                  <select name="receipttype" class="form-select" aria-describedby="receipttypeHelp" id="receipttype">
+                    <option value="standalone" selected>Standalone and separate from signature</option>
+                    <option value="embedded">Embedded into the original signature's headers</option>
+                  </select>
+                  <div id="receipttypeHelp" class="form-text">Specify how you want the receipt to be issued. Embedded option suits when you do not want to store the signature and receipt separately.</div>
+                </div>
+              </fieldset>
               <button type="submit" class="btn btn-primary">Countersign and download receipt</button>
             </form>
           </div>
