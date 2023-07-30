@@ -223,6 +223,9 @@ type ApiError struct {
 
 // sendError sends a json error response
 func sendError(w http.ResponseWriter, message string, err error) {
+	if err == nil {
+		err = errors.New(message)
+	}
 	log.Printf("%s: %+v", message, err)
 	w.Header().Set("Content-Type", "application/json")
 	apiError := ApiError{
