@@ -130,7 +130,7 @@
                   --form signaturefile='@./my/signature/file.cose'</pre>
                 <p class="card-text">Using a hex value:</p>
                 <pre class="card-text">curl -L 'https://playground-cose-eastus-api.azurewebsites.net/signature/verify' -X POST \
-                  --form signaturehex='d2845828a301260446666f6f62617219018758186469643a7765623a6c6f63616c686f737425334137303731a04378787858401155407c3e8c4393010512973c333f2d6683a13eeec2a1baa794fb88f2d2e8e0de5e77d970c1ba3ad15c3742ae9189a76072fae019e46f15c0e1d6a528b58f5b'</pre>
+                  --form signaturehex='d2845828a301260446666f6f...17219018758186469643a77'</pre>
               </div>
             </div>
           </div>
@@ -147,6 +147,12 @@
       <div class="col-md-6">
 
         <h3 id="createreceipt">Countersign</h3>
+
+        <p>
+          This implementation produces a full countersignature - COSE_Countersignature aka receipt. 
+          It contains a signature over the details of the submitted COSE_Sign1 parts (CounterSignatureV2).
+          Please refer to <a href="https://datatracker.ietf.org/doc/html/rfc9338">RFC9338</a> for more details on countersignatures.
+        </p>
 
         <ul class="nav nav-tabs" role="tablist">
           <li class="nav-item" role="presentation">
@@ -180,13 +186,13 @@
                 <div class="mb-3">
                   <label for="receiptType" class="form-label">Receipt type</label>
                   <select name="receipttype" class="form-select" aria-describedby="receipttypeHelp" id="receipttype">
-                    <option value="standalone" selected>Standalone and separate from signature</option>
+                    <option value="standalone" selected>Standalone - separate from signature</option>
                     <option value="embedded">Embedded into the original signature's headers</option>
                   </select>
-                  <div id="receipttypeHelp" class="form-text">Specify how you want the receipt to be issued. Embedded option suits when you do not want to store the signature and receipt separately.</div>
+                  <div id="receipttypeHelp" class="form-text">Specify how you want the receipt to be issued. Embedded option suits when you want keep signature and countersignature in one file.</div>
                 </div>
               </fieldset>
-              <button type="submit" class="btn btn-primary">Countersign and download receipt</button>
+              <button type="submit" class="btn btn-primary">Countersign and download</button>
             </form>
           </div>
           
@@ -196,10 +202,12 @@
               <div class="card-body">
                 <p class="card-text">Using a file:</p>
                 <pre class="card-text">curl -L 'https://playground-cose-eastus-api.azurewebsites.net/receipt/create' -X POST \
-                  --form signaturefile='@./my/signature/file.cose'</pre>
+                  --form signaturefile='@./my/signature/file.cose'
+                  --form receipttype='embedded'</pre>
                 <p class="card-text">Using a hex value:</p>
                 <pre class="card-text">curl -L 'https://playground-cose-eastus-api.azurewebsites.net/receipt/create' -X POST \
-                  --form signaturehex='d2845828a301260446666f6f62617219018758186469643a7765623a6c6f63616c686f737425334137303731a04378787858401155407c3e8c4393010512973c333f2d6683a13eeec2a1baa794fb88f2d2e8e0de5e77d970c1ba3ad15c3742ae9189a76072fae019e46f15c0e1d6a528b58f5b'</pre>
+                  --form signaturehex='d2845828a301260446666f6f...17219018758186469643a77'
+                  --form receipttype='embedded'</pre>
               </div>
             </div>    
           </div>
@@ -209,7 +217,7 @@
 
       <div class="col-md-6">
 
-        <h3 id="verifyreceipt">Verify</h3>
+        <h3 id="verifyreceipt">Verify receipt</h3>
 
         <ul class="nav nav-tabs" role="tablist">
           <li class="nav-item" role="presentation">
