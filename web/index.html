@@ -108,9 +108,13 @@
                   <label for="verifySigFile" class="form-label">Signature file</label>
                   <input type="file" name="signaturefile" class="form-control" aria-describedby="signaturefileHelp"
                     id="verifySigFile" />
-                  <div id="signaturefileHelp" class="form-text">Attach the cose file if you have it</div>
+                  <div id="signaturefileHelp" class="form-text">
+                    Attach the cose file if you have it, or
+                      <a data-bs-toggle="collapse" href="#verifySigHexSection" role="button" aria-expanded="false" aria-controls="verifySigHexSection">
+                        use HEX input</a>
+                  </div>
                 </div>
-                <div class="mb-3">
+                <div class="mb-3 collapse" id="verifySigHexSection">
                   <label for="verifySigHex" class="form-label">Signature HEX</label>
                   <textarea name="signaturehex" class="form-control" aria-describedby="signaturehexHelp" id="verifySigHex"
                     cols="30" rows="2" placeholder='d2845828a301260446666f6f62617219018758186...'></textarea>
@@ -172,9 +176,13 @@
                   <label for="receiptSigFile" class="form-label">Signature file</label>
                   <input type="file" name="signaturefile" class="form-control" aria-describedby="signaturefileHelp"
                     id="receiptSigFile" />
-                  <div id="signaturefileHelp" class="form-text">Attach the cose file if you have it</div>
+                  <div id="signaturefileHelp" class="form-text">
+                    Attach the cose file if you have it, or
+                      <a data-bs-toggle="collapse" href="#receiptSigHexSection" role="button" aria-expanded="false" aria-controls="receiptSigHexSection">
+                        use HEX input</a>
+                  </div>
                 </div>
-                <div class="mb-3">
+                <div class="mb-3 collapse" id="receiptSigHexSection">
                   <label for="receiptSigHex" class="form-label">Signature HEX</label>
                   <textarea name="signaturehex" class="form-control" aria-describedby="signaturehexHelp" id="receiptSigHex"
                     cols="30" rows="2" placeholder='d2845828a301260446666f6f62617219018758186...'></textarea>
@@ -242,9 +250,13 @@
                   <label for="receiptVerifySigFile" class="form-label">Signature file</label>
                   <input type="file" name="signaturefile" class="form-control" aria-describedby="signaturefileHelp"
                     id="receiptVerifySigFile" />
-                  <div id="signaturefileHelp" class="form-text">Attach the cose file if you have it</div>
+                  <div id="signaturefileHelp" class="form-text">
+                    Attach the cose file if you have it, or
+                      <a data-bs-toggle="collapse" href="#receiptVerifySigHexSection" role="button" aria-expanded="false" aria-controls="receiptVerifySigHexSection">
+                        use HEX input</a>
+                  </div>
                 </div>
-                <div class="mb-3">
+                <div class="mb-3 collapse" id="receiptVerifySigHexSection">
                   <label for="receiptVerifySigHex" class="form-label">Signature HEX</label>
                   <textarea name="signaturehex" class="form-control" aria-describedby="signaturehexHelp" id="receiptVerifySigHex"
                     cols="30" rows="2" placeholder='d2845828a301260446666f6f62617219018758186...'></textarea>
@@ -257,9 +269,13 @@
                   <label for="receiptVerifyFile" class="form-label">Receipt file</label>
                   <input type="file" name="receiptfile" class="form-control" aria-describedby="receiptfileHelp"
                     id="receiptVerifyFile" />
-                  <div id="receiptfileHelp" class="form-text">Attach the cose file if you have it</div>
+                  <div id="receiptfileHelp" class="form-text">
+                    Attach the receipt file if you have it, or
+                      <a data-bs-toggle="collapse" href="#receiptVerifyHexSection" role="button" aria-expanded="false" aria-controls="receiptVerifyHexSection">
+                        use HEX input</a>
+                  </div>
                 </div>
-                <div class="mb-3">
+                <div class="mb-3 collapse" id="receiptVerifyHexSection">
                   <label for="receiptVerifyHex" class="form-label">Receipt HEX</label>
                   <textarea name="receipthex" class="form-control" aria-describedby="receipthexHelp" id="receiptVerifyHex"
                     cols="30" rows="2" placeholder='d2845828a301260446666f6f62617219018758186...'></textarea>
