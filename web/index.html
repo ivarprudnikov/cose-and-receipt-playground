@@ -105,14 +105,14 @@
               <fieldset>
                 <legend>Provide signature</legend>
                 <div class="mb-3">
-                  <label for="signaturefile" class="form-label">Signature file</label>
+                  <label for="verifySigFile" class="form-label">Signature file</label>
                   <input type="file" name="signaturefile" class="form-control" aria-describedby="signaturefileHelp"
-                    id="signaturefile" />
+                    id="verifySigFile" />
                   <div id="signaturefileHelp" class="form-text">Attach the cose file if you have it</div>
                 </div>
                 <div class="mb-3">
-                  <label for="signaturehex" class="form-label">Signature HEX</label>
-                  <textarea name="signaturehex" class="form-control" aria-describedby="signaturehexHelp" id="signaturehex"
+                  <label for="verifySigHex" class="form-label">Signature HEX</label>
+                  <textarea name="signaturehex" class="form-control" aria-describedby="signaturehexHelp" id="verifySigHex"
                     cols="30" rows="2" placeholder='d2845828a301260446666f6f62617219018758186...'></textarea>
                   <div id="signaturehexHelp" class="form-text">If you do not have a file but know the signature representation in HEX then use this field</div>
                 </div>
@@ -169,14 +169,14 @@
               <fieldset>
                 <legend>Provide signature</legend>
                 <div class="mb-3">
-                  <label for="signaturefile" class="form-label">Signature file</label>
+                  <label for="receiptSigFile" class="form-label">Signature file</label>
                   <input type="file" name="signaturefile" class="form-control" aria-describedby="signaturefileHelp"
-                    id="signaturefile" />
+                    id="receiptSigFile" />
                   <div id="signaturefileHelp" class="form-text">Attach the cose file if you have it</div>
                 </div>
                 <div class="mb-3">
-                  <label for="signaturehex" class="form-label">Signature HEX</label>
-                  <textarea name="signaturehex" class="form-control" aria-describedby="signaturehexHelp" id="signaturehex"
+                  <label for="receiptSigHex" class="form-label">Signature HEX</label>
+                  <textarea name="signaturehex" class="form-control" aria-describedby="signaturehexHelp" id="receiptSigHex"
                     cols="30" rows="2" placeholder='d2845828a301260446666f6f62617219018758186...'></textarea>
                   <div id="signaturehexHelp" class="form-text">If you do not have a file but know the signature representation in HEX then use this field</div>
                 </div>
@@ -185,7 +185,7 @@
                 <legend>Receipt output</legend>
                 <div class="mb-3">
                   <label for="receiptType" class="form-label">Receipt type</label>
-                  <select name="receipttype" class="form-select" aria-describedby="receipttypeHelp" id="receipttype">
+                  <select name="receipttype" class="form-select" aria-describedby="receipttypeHelp" id="receiptType">
                     <option value="standalone" selected>Standalone - separate from signature</option>
                     <option value="embedded">Embedded into the original signature's headers</option>
                   </select>
@@ -239,14 +239,14 @@
               <fieldset>
                 <legend>Provide signature</legend>
                 <div class="mb-3">
-                  <label for="signaturefile" class="form-label">Signature file</label>
+                  <label for="receiptVerifySigFile" class="form-label">Signature file</label>
                   <input type="file" name="signaturefile" class="form-control" aria-describedby="signaturefileHelp"
-                    id="signaturefile" />
+                    id="receiptVerifySigFile" />
                   <div id="signaturefileHelp" class="form-text">Attach the cose file if you have it</div>
                 </div>
                 <div class="mb-3">
-                  <label for="signaturehex" class="form-label">Signature HEX</label>
-                  <textarea name="signaturehex" class="form-control" aria-describedby="signaturehexHelp" id="signaturehex"
+                  <label for="receiptVerifySigHex" class="form-label">Signature HEX</label>
+                  <textarea name="signaturehex" class="form-control" aria-describedby="signaturehexHelp" id="receiptVerifySigHex"
                     cols="30" rows="2" placeholder='d2845828a301260446666f6f62617219018758186...'></textarea>
                   <div id="signaturehexHelp" class="form-text">If you do not have a file but know the signature representation in HEX then use this field</div>
                 </div>
@@ -254,14 +254,14 @@
               <fieldset>
                 <legend>Provide receipt</legend>
                 <div class="mb-3">
-                  <label for="receiptfile" class="form-label">Receipt file</label>
+                  <label for="receiptVerifyFile" class="form-label">Receipt file</label>
                   <input type="file" name="receiptfile" class="form-control" aria-describedby="receiptfileHelp"
-                    id="receiptfile" />
+                    id="receiptVerifyFile" />
                   <div id="receiptfileHelp" class="form-text">Attach the cose file if you have it</div>
                 </div>
                 <div class="mb-3">
-                  <label for="receipthex" class="form-label">Receipt HEX</label>
-                  <textarea name="receipthex" class="form-control" aria-describedby="receipthexHelp" id="receipthex"
+                  <label for="receiptVerifyHex" class="form-label">Receipt HEX</label>
+                  <textarea name="receipthex" class="form-control" aria-describedby="receipthexHelp" id="receiptVerifyHex"
                     cols="30" rows="2" placeholder='d2845828a301260446666f6f62617219018758186...'></textarea>
                   <div id="receipthexHelp" class="form-text">If you do not have a file but know the representation in HEX then use this field</div>
                 </div>
