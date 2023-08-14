@@ -3,7 +3,7 @@ module github.com/ivarprudnikov/cose-and-receipt-playground
 go 1.20
 
 require (
-	github.com/fxamacker/cbor/v2 v2.4.0
+	github.com/fxamacker/cbor/v2 v2.5.0
 	github.com/lestrrat-go/jwx v1.2.26
 	github.com/stretchr/testify v1.8.4
 	github.com/veraison/go-cose v1.2.0
