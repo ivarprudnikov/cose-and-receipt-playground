@@ -79,7 +79,7 @@ func sigCreateHandler(w http.ResponseWriter, r *http.Request) {
 
 // sigVerifyHandler verifies a signature provided in the request
 func sigVerifyHandler(w http.ResponseWriter, r *http.Request) {
-	signature, err := readBytesFromForm(r, "signaturefile", "signaturehex")
+	signature, err := readBytesFromForm(r, "signaturefile", "signaturehex", false)
 	if err != nil {
 		sendError(w, "failed to read signature", err)
 		return
@@ -100,7 +100,7 @@ func sigVerifyHandler(w http.ResponseWriter, r *http.Request) {
 func receiptCreateHandler(w http.ResponseWriter, r *http.Request) {
 	STANDALONE := "standalone"
 
-	signature, err := readBytesFromForm(r, "signaturefile", "signaturehex")
+	signature, err := readBytesFromForm(r, "signaturefile", "signaturehex", false)
 	if err != nil {
 		sendError(w, "failed to read signature", err)
 		return
@@ -128,9 +128,15 @@ func receiptCreateHandler(w http.ResponseWriter, r *http.Request) {
 		sendError(w, "failed to countersign", err)
 		return
 	}
+	var filename string
+	if receiptType == STANDALONE {
+		filename = fmt.Sprintf(`receipt.%s.cbor`, signatureHashHex)
+	} else {
+		filename = fmt.Sprintf(`signature.%s.embedded.cose`, signatureHashHex)
+	}
 	receiptHex := hex.EncodeToString(receipt)
 	w.Header().Add("Content-Type", "application/cbor")
-	w.Header().Add("Content-Disposition", fmt.Sprintf(`attachment; filename="receipt.%s.cbor"`, signatureHashHex))
+	w.Header().Add("Content-Disposition", fmt.Sprintf(`attachment; filename="%s"`, filename))
 	w.Header().Add("Content-Transfer-Encoding", "binary")
 	w.Header().Add("Content-Length", fmt.Sprintf("%d", len(receipt)))
 	w.Header().Add("X-Receipt-Hex", receiptHex)
@@ -139,30 +145,41 @@ func receiptCreateHandler(w http.ResponseWriter, r *http.Request) {
 
 // receiptVerifyHandler verifies a receipt and a signature provided in the request
 func receiptVerifyHandler(w http.ResponseWriter, r *http.Request) {
-	signature, err := readBytesFromForm(r, "signaturefile", "signaturehex")
+	signatureB, err := readBytesFromForm(r, "signaturefile", "signaturehex", false)
 	if err != nil {
 		sendError(w, "failed to read signature", err)
 		return
 	}
-	receipt, err := readBytesFromForm(r, "receiptfile", "receipthex")
+
+	var signature cose.Sign1Message
+	if err = signature.UnmarshalCBOR(signatureB); err != nil {
+		sendError(w, "failed to unmarshal signature bytes", err)
+		return
+	}
+
+	receiptB, err := readBytesFromForm(r, "receiptfile", "receipthex", true)
 	if err != nil {
 		sendError(w, "failed to read receipt", err)
 		return
 	}
 
-	var target cose.Sign1Message
-	if err = target.UnmarshalCBOR(signature); err != nil {
-		sendError(w, "failed to unmarshal signature bytes", err)
-		return
+	if len(receiptB) == 0 {
+		embeddedReceiptRaw := signature.Headers.Unprotected[countersigner.COSE_Countersignature_header]
+		var ok bool
+		receiptB, ok = embeddedReceiptRaw.([]byte)
+		if !ok || len(receiptB) == 0 {
+			sendError(w, "failed to get receipt bytes from both the request and the signature header", nil)
+			return
+		}
 	}
 
-	var countersignature cose.Sign1Message
-	if err = countersignature.UnmarshalCBOR(receipt); err != nil {
+	var receipt cose.Sign1Message
+	if err = receipt.UnmarshalCBOR(receiptB); err != nil {
 		sendError(w, "failed to unmarshal receipt bytes", err)
 		return
 	}
 
-	err = countersigner.Verify(countersignature, target)
+	err = countersigner.Verify(receipt, signature)
 	if err != nil {
 		sendError(w, "failed to verify receipt", err)
 		return
@@ -190,7 +207,7 @@ func main() {
 }
 
 // readBytesFromForm reads bytes from either a file or a hex string from the form fields
-func readBytesFromForm(r *http.Request, filekey string, hexkey string) ([]byte, error) {
+func readBytesFromForm(r *http.Request, filekey string, hexkey string, isOptional bool) ([]byte, error) {
 	err := r.ParseMultipartForm(MAX_FORM_SIZE)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read request body parameters: %w", err)
@@ -200,6 +217,9 @@ func readBytesFromForm(r *http.Request, filekey string, hexkey string) ([]byte, 
 	formHex := r.PostForm.Get(hexkey)
 
 	if formHex == "" && len(formFiles) == 0 {
+		if isOptional {
+			return []byte{}, nil
+		}
 		return nil, fmt.Errorf("%s or %s is required", filekey, hexkey)
 	}
 
