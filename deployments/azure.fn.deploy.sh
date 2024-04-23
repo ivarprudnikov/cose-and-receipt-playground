@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -euo pipefail
+
 RG="playground-cose-eastus-rg"
 FN_NAME="playground-cose-eastus-api"
 # Remove prior versions
