@@ -1,6 +1,6 @@
 module github.com/ivarprudnikov/cose-and-receipt-playground
 
-go 1.22
+go 1.22.2
 
 require (
 	github.com/fxamacker/cbor/v2 v2.6.0
