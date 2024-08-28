@@ -7,7 +7,7 @@ FN_NAME="playground-cose-eastus-api"
 # Remove prior versions
 rm -f bin/server package.zip
 # Build the binary
-GOOS=linux GOARCH=amd64 go build -o bin/server server.go
+GOOS=linux GOARCH=amd64 go build -o bin/server *.go
 # Prepare function package
 zip -r package . --include "bin/*" "func-match-all-config/*" host.json
 # Deploy the package
