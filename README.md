@@ -10,33 +10,24 @@ API/website: https://playground-cose-eastus-api.azurewebsites.net
 
 **Prerequisites**
 
-* Go
-* Azure functions core tools
+- Install Go to compile and run the application: https://golang.org/doc/install
+- Install Node to run e2e tests: https://nodejs.org/en/download/
+- Install Azure Functions Core Tools if you will run the local in Azure functions environment: https://learn.microsoft.com/en-us/azure/azure-functions/functions-run-local
+- Access to Azure if you will create/update/deploy function app: https://portal.azure.com
+  - Azure CLI is used when deploying the [resources](./deployments/)
 
-## Build and test
+**Commands**
 
-* build the binary `GOOS=linux GOARCH=amd64 go build -o bin/server server.go`
-* run tests `go test -v ./...`
-
-## Azure function
-
-### Build and run locally
-
-```sh
-./scripts/run.sh
-```
-
-### Setup necessary resources
-
-```
-./deployments/azure.infra.create.sh
-```
-
-### Build and deploy (update)
-
-```
-./deployments/azure.fn.deploy.sh
-```
+- Testing
+  - Run unit tests: `go test -v ./...`
+  - Run functional end-to-end (e2e) tests, [see readme](cypress/README.md)
+- Running locally
+  - Compile and execute the server binary: `go run .`
+  - Or, run the server in an Azure function environment locally: `./scripts/run.sh`
+- Deployment
+  - Build the binary `GOOS=linux GOARCH=amd64 go build -o bin/server server.go`
+  - Compile and deploy to Azure: [azure.fn.deploy.sh](deployments/azure.fn.deploy.sh)
+  - Create required Azure infrastructure: [azure.infra.create.sh](deployments/azure.infra.create.sh)
 
 # References
 
