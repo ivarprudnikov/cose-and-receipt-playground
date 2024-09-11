@@ -32,14 +32,14 @@ const MAX_REQ_BURST = 4
 
 func AddRoutes(mux *http.ServeMux) {
 	pre := newAppMiddleware()
-	mux.Handle("GET /.well-known/did.json", pre(didHandler()))
-	mux.Handle("POST /signature/create", pre(sigCreateHandler()))
+	mux.Handle("GET /.well-known/did.json", pre(DidHandler()))
+	mux.Handle("POST /signature/create", pre(SigCreateHandler()))
 	mux.Handle("POST /signature/verify", pre(sigVerifyHandler()))
 	mux.Handle("POST /receipt/create", pre(receiptCreateHandler()))
 	mux.Handle("POST /receipt/verify", pre(receiptVerifyHandler()))
-	mux.Handle("GET /", pre(indexHandler()))
-	mux.Handle("GET /index.html", pre(indexHandler()))
-	mux.Handle("GET /favicon.ico", pre(faviconHandler()))
+	mux.Handle("GET /", pre(IndexHandler()))
+	mux.Handle("GET /index.html", pre(IndexHandler()))
+	mux.Handle("GET /favicon.ico", pre(FaviconHandler()))
 }
 
 // Main app middleware called before each request
@@ -113,8 +113,8 @@ func newAppMiddleware() func(h http.Handler) http.Handler {
 	}
 }
 
-// indexHandler returns the main index page
-func indexHandler() http.HandlerFunc {
+// IndexHandler returns the main index page
+func IndexHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/" && r.URL.Path != "/index.html" {
 			w.WriteHeader(http.StatusNotFound)
@@ -128,7 +128,7 @@ func indexHandler() http.HandlerFunc {
 	}
 }
 
-func faviconHandler() http.HandlerFunc {
+func FaviconHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Cache-Control", "public, max-age=86400")
 		w.Header().Add("Content-Type", "image/svg+xml")
@@ -151,8 +151,8 @@ func faviconHandler() http.HandlerFunc {
 	}
 }
 
-// didHandler returns a DID document for the current server
-func didHandler() http.HandlerFunc {
+// DidHandler returns a DID document for the current server
+func DidHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		didDoc, err := keys.CreateDoc(getHostPort(), keys.GetKeyDefault().Public())
 		if err != nil {
@@ -164,8 +164,8 @@ func didHandler() http.HandlerFunc {
 	}
 }
 
-// sigCreateHandler creates a signature for a payload provided in the request
-func sigCreateHandler() http.HandlerFunc {
+// SigCreateHandler creates a signature for a payload provided in the request
+func SigCreateHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		err := r.ParseMultipartForm(MAX_FORM_SIZE)
 		if err != nil {
