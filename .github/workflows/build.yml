@@ -19,3 +19,15 @@ jobs:
         with:
           go-version-file: go.mod
           go-package: ./...
+      - name: Install Cypress
+        run: npm install cypress@13.7.3
+      - name: Run Cypress tests
+        uses: cypress-io/github-action@v6
+        with:
+          start: go run .
+          cache-key: somevalue
+          wait-on: 'http://localhost:8080'
+          install: false
+        env:
+          CYPRESS_CRASH_REPORTS: 0
+          CYPRESS_COMMERCIAL_RECOMMENDATIONS: 0
