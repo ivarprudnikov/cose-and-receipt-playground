@@ -3,9 +3,11 @@ package signer
 import (
 	"crypto/rand"
 	_ "crypto/sha256"
+	"encoding/base64"
 	"fmt"
 	"log"
 	"net/http"
+	"sort"
 	"strings"
 	"time"
 
@@ -18,26 +20,51 @@ const ISSUER_HEADER_KEY = int64(391)
 const ISSUER_HEADER_FEED = int64(392)
 const ISSUER_HEADER_REG_INFO = int64(393)
 
-func CreateSignature(payload []byte, contentType string, hostport string) ([]byte, error) {
+func PrintHeaders(headers map[interface{}]interface{}) string {
+	returnValue := []string{}
+	for key, value := range headers {
+		var parsedVal string
+		if v, ok := value.([]byte); ok {
+			if key == cose.HeaderLabelKeyID {
+				parsedVal = string(v)
+			} else {
+				parsedVal = base64.StdEncoding.EncodeToString(v)
+			}
+		} else if v, ok := value.(map[interface{}]interface{}); ok {
+			parsedVal = fmt.Sprintf("[ %v ]", PrintHeaders(v))
+		} else {
+			parsedVal = fmt.Sprintf("%v", value)
+		}
+		returnValue = append(returnValue, fmt.Sprintf("%v: %v", key, parsedVal))
+	}
+	sort.Strings(returnValue)
+	return strings.Join(returnValue, ", ")
+}
+
+func DefaultHeaders(contentType string, hostport string) cose.ProtectedHeader {
 	hostport = strings.ReplaceAll(hostport, ":", "%3A")
+	return cose.ProtectedHeader{
+		cose.HeaderLabelAlgorithm:   cose.AlgorithmES256,
+		cose.HeaderLabelContentType: contentType,
+		cose.HeaderLabelKeyID:       []byte("#" + keys.GetPublicKeyIdDefault()),
+		ISSUER_HEADER_KEY:           "did:web:" + hostport,
+		ISSUER_HEADER_FEED:          "demo",
+		ISSUER_HEADER_REG_INFO: map[interface{}]interface{}{
+			"register_by": uint64(time.Now().Add(24 * time.Hour).Unix()),
+			"sequence_no": uint64(1),
+			"issuance_ts": uint64(time.Now().Unix()),
+		},
+	}
+}
+
+func CreateSignature(payload []byte, contentType string, hostport string) ([]byte, error) {
 	signer, err := keys.GetCoseSignerDefault()
 	if err != nil {
 		return nil, err
 	}
 	// create message header
 	headers := cose.Headers{
-		Protected: cose.ProtectedHeader{
-			cose.HeaderLabelAlgorithm:   cose.AlgorithmES256,
-			cose.HeaderLabelContentType: contentType,
-			cose.HeaderLabelKeyID:       []byte("#" + keys.GetPublicKeyIdDefault()),
-			ISSUER_HEADER_KEY:           "did:web:" + hostport,
-			ISSUER_HEADER_FEED:          "demo",
-			ISSUER_HEADER_REG_INFO: map[interface{}]interface{}{
-				"register_by": uint64(time.Now().Add(24 * time.Hour).Unix()),
-				"sequence_no": uint64(1),
-				"issuance_ts": uint64(time.Now().Unix()),
-			},
-		},
+		Protected: DefaultHeaders(contentType, hostport),
 	}
 	// sign and marshal message
 	return cose.Sign1(rand.Reader, signer, headers, payload, nil)

@@ -2,12 +2,14 @@ package main
 
 import (
 	"crypto/sha256"
-	_ "embed"
+	"embed"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"html/template"
 	"io"
+	"io/fs"
 	"log"
 	"log/slog"
 	"strings"
@@ -23,23 +25,37 @@ import (
 	"golang.org/x/time/rate"
 )
 
-//go:embed web/index.html
-var indexHtml string
-
 const MAX_FORM_SIZE = int64(32 << 20) // 32 MB
 const MAX_REQ_SEC = 2
 const MAX_REQ_BURST = 4
+const TEMPLATES_MATCH = "web/*.tmpl"
+const DEFAULT_CONTENT_TYPE = "text/plain"
+
+// templates get embedded in the binary
+//
+//go:embed web
+var templatesFs embed.FS
+
+var tmpl *template.Template
+
+func init() {
+	tmpl = template.Must(template.ParseFS(templatesFs, TEMPLATES_MATCH))
+	matches, _ := fs.Glob(templatesFs, TEMPLATES_MATCH)
+	for _, v := range matches {
+		log.Printf("Using template file: %s", v)
+	}
+}
 
 func AddRoutes(mux *http.ServeMux) {
 	pre := newAppMiddleware()
-	mux.Handle("GET /.well-known/did.json", pre(didHandler()))
-	mux.Handle("POST /signature/create", pre(sigCreateHandler()))
+	mux.Handle("GET /.well-known/did.json", pre(DidHandler()))
+	mux.Handle("POST /signature/create", pre(SigCreateHandler()))
 	mux.Handle("POST /signature/verify", pre(sigVerifyHandler()))
 	mux.Handle("POST /receipt/create", pre(receiptCreateHandler()))
 	mux.Handle("POST /receipt/verify", pre(receiptVerifyHandler()))
-	mux.Handle("GET /", pre(indexHandler()))
-	mux.Handle("GET /index.html", pre(indexHandler()))
-	mux.Handle("GET /favicon.ico", pre(faviconHandler()))
+	mux.Handle("GET /", pre(IndexHandler()))
+	mux.Handle("GET /index.html", pre(IndexHandler()))
+	mux.Handle("GET /favicon.ico", pre(FaviconHandler()))
 }
 
 // Main app middleware called before each request
@@ -88,11 +104,13 @@ func newAppMiddleware() func(h http.Handler) http.Handler {
 			if len(xForwardedForValues) <= 0 {
 				// Rate limiter not applicable
 				h.ServeHTTP(w, r)
+				return
 			}
 			xForwardedFor := strings.Join(xForwardedForValues, ",")
 			if xForwardedFor == "" {
 				// Rate limiter not applicable
 				h.ServeHTTP(w, r)
+				return
 			}
 			// Lock the mutex to protect this section from race conditions.
 			mu.Lock()
@@ -113,8 +131,8 @@ func newAppMiddleware() func(h http.Handler) http.Handler {
 	}
 }
 
-// indexHandler returns the main index page
-func indexHandler() http.HandlerFunc {
+// IndexHandler returns the main index page
+func IndexHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/" && r.URL.Path != "/index.html" {
 			w.WriteHeader(http.StatusNotFound)
@@ -124,11 +142,14 @@ func indexHandler() http.HandlerFunc {
 		w.Header().Set("Pragma", "no-cache")                                   // HTTP 1.0
 		w.Header().Set("Expires", "0")                                         // Proxies
 		w.Header().Add("Content-Type", "text/html")
-		fmt.Fprint(w, indexHtml)
+
+		tmpl.ExecuteTemplate(w, "index.tmpl", map[string]interface{}{
+			"defaultHeaders": signer.PrintHeaders(signer.DefaultHeaders(DEFAULT_CONTENT_TYPE, getHostPort())),
+		})
 	}
 }
 
-func faviconHandler() http.HandlerFunc {
+func FaviconHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Cache-Control", "public, max-age=86400")
 		w.Header().Add("Content-Type", "image/svg+xml")
@@ -151,8 +172,8 @@ func faviconHandler() http.HandlerFunc {
 	}
 }
 
-// didHandler returns a DID document for the current server
-func didHandler() http.HandlerFunc {
+// DidHandler returns a DID document for the current server
+func DidHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		didDoc, err := keys.CreateDoc(getHostPort(), keys.GetKeyDefault().Public())
 		if err != nil {
@@ -164,8 +185,8 @@ func didHandler() http.HandlerFunc {
 	}
 }
 
-// sigCreateHandler creates a signature for a payload provided in the request
-func sigCreateHandler() http.HandlerFunc {
+// SigCreateHandler creates a signature for a payload provided in the request
+func SigCreateHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		err := r.ParseMultipartForm(MAX_FORM_SIZE)
 		if err != nil {
@@ -174,7 +195,7 @@ func sigCreateHandler() http.HandlerFunc {
 		}
 		contentType := r.PostForm.Get("contenttype")
 		if strings.Trim(contentType, " ") == "" {
-			contentType = "text/plain"
+			contentType = DEFAULT_CONTENT_TYPE
 		}
 		payload := r.PostForm.Get("payload")
 		if payload == "" {
