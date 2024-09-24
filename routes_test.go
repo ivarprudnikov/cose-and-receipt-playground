@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"io"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -77,23 +78,31 @@ func TestDidDoc(t *testing.T) {
 
 func TestSignatureCreate(t *testing.T) {
 	type test struct {
-		name        string
-		contentType string
-		payload     string
+		name       string
+		formValues map[string]string
 	}
 	tests := []test{
 		{
-			name:        "default content type used",
-			contentType: "",
-			payload:     "foobar",
+			name:       "default content type used",
+			formValues: map[string]string{"payload": "hello", "contenttype": ""},
 		},
 	}
 
-	handler := main.IndexHandler()
+	handler := main.SigCreateHandler()
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {
-			req := httptest.NewRequest(http.MethodPost, "/", bytes.NewBufferString(tc.payload))
+
+			reqBody := new(bytes.Buffer)
+			mp := multipart.NewWriter(reqBody)
+			for key, val := range tc.formValues {
+				mp.WriteField(key, val)
+			}
+			mp.Close()
+
+			req := httptest.NewRequest(http.MethodPost, "/", reqBody)
+			req.Header.Set("Content-Type", mp.FormDataContentType())
+
 			w := httptest.NewRecorder()
 			handler.ServeHTTP(w, req)
 			res := w.Result()
