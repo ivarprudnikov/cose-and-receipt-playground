@@ -13,6 +13,37 @@ import (
 	"github.com/veraison/go-cose"
 )
 
+func Test_DefaultHeaders(t *testing.T) {
+	headers := signer.DefaultHeaders("application/json", "foo.bar.com:8080")
+	require.NotNil(t, headers)
+	require.Equal(t, headers[cose.HeaderLabelAlgorithm], interface{}(cose.AlgorithmES256))
+	require.Equal(t, headers[cose.HeaderLabelContentType], interface{}("application/json"))
+	kid, ok := headers[cose.HeaderLabelKeyID].([]byte)
+	require.True(t, ok)
+	require.Equal(t, kid[0], byte('#'))
+	require.Equal(t, headers[signer.ISSUER_HEADER_KEY], interface{}("did:web:foo.bar.com%3A8080"))
+	require.Equal(t, headers[signer.ISSUER_HEADER_FEED], interface{}("demo"))
+
+	regInfo, ok := headers[signer.ISSUER_HEADER_REG_INFO].(map[interface{}]interface{})
+	require.True(t, ok)
+	require.Greater(t, regInfo["register_by"].(uint64), uint64(time.Now().Unix()+3600))
+	require.Equal(t, regInfo["sequence_no"], uint64(1))
+	require.LessOrEqual(t, regInfo["issuance_ts"].(uint64), uint64(time.Now().Unix()))
+}
+
+func Test_PrintHeaders(t *testing.T) {
+	headers := signer.DefaultHeaders("application/json", "foo.bar.com:8080")
+	printed := signer.PrintHeaders(headers)
+	require.Contains(t, printed, "1: ES256,")
+	require.Contains(t, printed, "3: application/json,")
+	require.Contains(t, printed, "4: #")
+	require.Contains(t, printed, "391: did:web:foo.bar.com%3A8080,")
+	require.Contains(t, printed, "392: demo,")
+	require.Contains(t, printed, "issuance_ts: ")
+	require.Contains(t, printed, "register_by: ")
+	require.Contains(t, printed, "sequence_no: 1")
+}
+
 func Test_Create_Sig(t *testing.T) {
 	sig, err := signer.CreateSignature([]byte("hello world"), "foo/bar", "foo.bar.com")
 	require.NoError(t, err)

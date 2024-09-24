@@ -1,0 +1,49 @@
+<ul class="nav nav-tabs" role="tablist">
+    <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="sig-new-form-tab" data-bs-toggle="tab" data-bs-target="#sig-new-form"
+            type="button" role="tab" aria-controls="sig-new-form" aria-selected="true">Form</button>
+    </li>
+    <li class="nav-item" role="presentation">
+        <button class="nav-link" id="sig-new-curl-tab" data-bs-toggle="tab" data-bs-target="#sig-new-curl" type="button"
+            role="tab" aria-controls="sig-new-curl" aria-selected="false">cURL</button>
+    </li>
+</ul>
+<div class="tab-content">
+
+    <div class="tab-pane fade show active" id="sig-new-form" role="tabpanel" aria-labelledby="sig-new-form-tab">
+        <form id="sign" class="my-4" name="sign" action="/signature/create" method="POST" enctype="multipart/form-data">
+            <div class="mb-3">
+                <p>Default protected headers: <code>{{ .defaultHeaders }}</code></p>
+            </div>
+            <div class="mb-3">
+                <label for="payload" class="form-label">Payload</label>
+                <textarea name="payload" class="form-control" aria-describedby="payloadHelp" id="payload" cols="30"
+                    rows="4" placeholder="any text or json or else"></textarea>
+                <div id="payloadHelp" class="form-text">Payload will get embedded in the COSE_Sign1 signature envelope.
+                    The
+                    generated private key will be used to sign.</div>
+            </div>
+            <div class="mb-3">
+                <label for="contenttype" class="form-label">Content type</label>
+                <input name="contenttype" class="form-control" aria-describedby="contenttypeHelp" id="contenttype"
+                    placeholder="text/plain"></input>
+                <div id="contenttypeHelp" class="form-text">Content type of the payload to add to the headers, defaults
+                    to "text/plain"</div>
+            </div>
+
+            <button type="submit" class="btn btn-primary">Create and download signature</button>
+        </form>
+    </div>
+
+    <div class="tab-pane fade" id="sig-new-curl" role="tabpanel" aria-labelledby="sig-new-curl-tab">
+        <div class="card text-bg-light my-4">
+            <div class="card-header">Create with cURL</div>
+            <div class="card-body">
+                <pre class="card-text">curl -L 'https://playground-cose-eastus-api.azurewebsites.net/signature/create' -X POST \
+                  --form payload='{"foo":"bar"}' \
+                  --form contenttype='application/json' \
+                  -o signature.cose</pre>
+            </div>
+        </div>
+    </div>
+</div>

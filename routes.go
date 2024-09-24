@@ -2,12 +2,14 @@ package main
 
 import (
 	"crypto/sha256"
-	_ "embed"
+	"embed"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"html/template"
 	"io"
+	"io/fs"
 	"log"
 	"log/slog"
 	"strings"
@@ -23,12 +25,26 @@ import (
 	"golang.org/x/time/rate"
 )
 
-//go:embed web/index.html
-var indexHtml string
-
 const MAX_FORM_SIZE = int64(32 << 20) // 32 MB
 const MAX_REQ_SEC = 2
 const MAX_REQ_BURST = 4
+const TEMPLATES_MATCH = "web/*.tmpl"
+const DEFAULT_CONTENT_TYPE = "text/plain"
+
+// templates get embedded in the binary
+//
+//go:embed web
+var templatesFs embed.FS
+
+var tmpl *template.Template
+
+func init() {
+	tmpl = template.Must(template.ParseFS(templatesFs, TEMPLATES_MATCH))
+	matches, _ := fs.Glob(templatesFs, TEMPLATES_MATCH)
+	for _, v := range matches {
+		log.Printf("Using template file: %s", v)
+	}
+}
 
 func AddRoutes(mux *http.ServeMux) {
 	pre := newAppMiddleware()
@@ -88,11 +104,13 @@ func newAppMiddleware() func(h http.Handler) http.Handler {
 			if len(xForwardedForValues) <= 0 {
 				// Rate limiter not applicable
 				h.ServeHTTP(w, r)
+				return
 			}
 			xForwardedFor := strings.Join(xForwardedForValues, ",")
 			if xForwardedFor == "" {
 				// Rate limiter not applicable
 				h.ServeHTTP(w, r)
+				return
 			}
 			// Lock the mutex to protect this section from race conditions.
 			mu.Lock()
@@ -124,7 +142,10 @@ func IndexHandler() http.HandlerFunc {
 		w.Header().Set("Pragma", "no-cache")                                   // HTTP 1.0
 		w.Header().Set("Expires", "0")                                         // Proxies
 		w.Header().Add("Content-Type", "text/html")
-		fmt.Fprint(w, indexHtml)
+
+		tmpl.ExecuteTemplate(w, "index.tmpl", map[string]interface{}{
+			"defaultHeaders": signer.PrintHeaders(signer.DefaultHeaders(DEFAULT_CONTENT_TYPE, getHostPort())),
+		})
 	}
 }
 
@@ -174,7 +195,7 @@ func SigCreateHandler() http.HandlerFunc {
 		}
 		contentType := r.PostForm.Get("contenttype")
 		if strings.Trim(contentType, " ") == "" {
-			contentType = "text/plain"
+			contentType = DEFAULT_CONTENT_TYPE
 		}
 		payload := r.PostForm.Get("payload")
 		if payload == "" {
