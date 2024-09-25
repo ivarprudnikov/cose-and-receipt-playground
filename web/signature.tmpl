@@ -13,15 +13,36 @@
     <div class="tab-pane fade show active" id="sig-new-form" role="tabpanel" aria-labelledby="sig-new-form-tab">
         <form id="sign" class="my-4" name="sign" action="/signature/create" method="POST" enctype="multipart/form-data">
             <div class="mb-3">
-                <p>Default protected headers: <code>{{ .defaultHeaders }}</code></p>
+                <p class="small">Default Cose protected headers: <code>{{ .defaultHeaders }}</code></p>
             </div>
             <div class="mb-3">
+                <label for="payloadFile" class="form-label">Payload file</label>
+                <input type="file" name="payloadfile" class="form-control" aria-describedby="payloadfileHelp"
+                    id="payloadFile" />
+                <div id="payloadfileHelp" class="form-text">
+                    Use the file if you have it, or
+                    <a data-bs-toggle="collapse" href="#payloadHexSection" role="button" aria-expanded="false"
+                        aria-controls="payloadHexSection">
+                        use HEX input</a> or 
+                    <a data-bs-toggle="collapse" href="#payloadTextSection" role="button" aria-expanded="false"
+                        aria-controls="payloadTextSection">
+                        use plain text input</a>
+                </div>
+            </div>
+            <div class="mb-3 collapse" id="payloadHexSection">
+                <label for="payloadHex" class="form-label">Payload HEX</label>
+                <textarea name="payloadhex" class="form-control" aria-describedby="payloadhexHelp"
+                    id="payloadHex" cols="30" rows="2"
+                    placeholder='d2845828a301260446666f6f62617219018758186...'></textarea>
+                <div id="payloadhexHelp" class="form-text">If you do not have a file but know the file
+                    representation in HEX then use this field</div>
+            </div>
+            <div class="mb-3 collapse" id="payloadTextSection">
                 <label for="payload" class="form-label">Payload</label>
                 <textarea name="payload" class="form-control" aria-describedby="payloadHelp" id="payload" cols="30"
                     rows="4" placeholder="any text or json or else"></textarea>
-                <div id="payloadHelp" class="form-text">Payload will get embedded in the COSE_Sign1 signature envelope.
-                    The
-                    generated private key will be used to sign.</div>
+                <div id="payloadHelp" class="form-text">If you do not have the file to upload but just 
+                    its text content then use this field.</div>
             </div>
             <div class="mb-3">
                 <label for="contenttype" class="form-label">Content type</label>

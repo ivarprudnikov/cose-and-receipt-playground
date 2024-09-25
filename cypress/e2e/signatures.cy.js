@@ -19,7 +19,8 @@ describe('signature tests', () => {
     }).as('sig')
 
     cy.get('#sign').within(() => {
-      cy.get('#payload').type('foobar')
+      cy.get('[aria-controls="payloadTextSection"]').should('be.visible').click()
+      cy.get('#payload', { timeout: 1000 }).type('foobar')
       cy.get('#contenttype').type('text/plain')
       cy.get('.btn-primary').should('be.visible').click()
     })
