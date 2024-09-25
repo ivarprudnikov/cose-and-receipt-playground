@@ -188,24 +188,21 @@ func DidHandler() http.HandlerFunc {
 // SigCreateHandler creates a signature for a payload provided in the request
 func SigCreateHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		err := r.ParseMultipartForm(MAX_FORM_SIZE)
+		payloadB, err := readBytesFromForm(r, "payloadfile", "payloadhex", "payload", false)
 		if err != nil {
-			sendError(w, "failed to read request body parameters", err)
+			sendError(w, "failed to read payload", err)
 			return
 		}
+
 		contentType := r.PostForm.Get("contenttype")
 		if strings.Trim(contentType, " ") == "" {
 			contentType = DEFAULT_CONTENT_TYPE
 		}
-		payload := r.PostForm.Get("payload")
-		if payload == "" {
-			sendError(w, "payload is empty", nil)
-			return
-		}
-		payloadHash := sha256.Sum256([]byte(payload))
+
+		payloadHash := sha256.Sum256(payloadB)
 		payloadHashHex := hex.EncodeToString(payloadHash[:])
 
-		signature, err := signer.CreateSignature([]byte(payload), contentType, getHostPort())
+		signature, err := signer.CreateSignature(payloadB, contentType, getHostPort())
 		if err != nil {
 			sendError(w, "failed to create signature", err)
 			return
@@ -223,7 +220,7 @@ func SigCreateHandler() http.HandlerFunc {
 // sigVerifyHandler verifies a signature provided in the request
 func sigVerifyHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		signature, err := readBytesFromForm(r, "signaturefile", "signaturehex", false)
+		signature, err := readBytesFromForm(r, "signaturefile", "signaturehex", "", false)
 		if err != nil {
 			sendError(w, "failed to read signature", err)
 			return
@@ -246,7 +243,7 @@ func receiptCreateHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		STANDALONE := "standalone"
 
-		signature, err := readBytesFromForm(r, "signaturefile", "signaturehex", false)
+		signature, err := readBytesFromForm(r, "signaturefile", "signaturehex", "", false)
 		if err != nil {
 			sendError(w, "failed to read signature", err)
 			return
@@ -293,7 +290,7 @@ func receiptCreateHandler() http.HandlerFunc {
 // receiptVerifyHandler verifies a receipt and a signature provided in the request
 func receiptVerifyHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		signatureB, err := readBytesFromForm(r, "signaturefile", "signaturehex", false)
+		signatureB, err := readBytesFromForm(r, "signaturefile", "signaturehex", "", false)
 		if err != nil {
 			sendError(w, "failed to read signature", err)
 			return
@@ -305,7 +302,7 @@ func receiptVerifyHandler() http.HandlerFunc {
 			return
 		}
 
-		receiptB, err := readBytesFromForm(r, "receiptfile", "receipthex", true)
+		receiptB, err := readBytesFromForm(r, "receiptfile", "receipthex", "", true)
 		if err != nil {
 			sendError(w, "failed to read receipt", err)
 			return
@@ -340,8 +337,8 @@ func receiptVerifyHandler() http.HandlerFunc {
 	}
 }
 
-// readBytesFromForm reads bytes from either a file or a hex string from the form fields
-func readBytesFromForm(r *http.Request, filekey string, hexkey string, isOptional bool) ([]byte, error) {
+// readBytesFromForm reads bytes from either a file or a hex or a text from the form fields
+func readBytesFromForm(r *http.Request, filekey string, hexkey string, textkey string, isOptional bool) ([]byte, error) {
 	err := r.ParseMultipartForm(MAX_FORM_SIZE)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read request body parameters: %w", err)
@@ -349,37 +346,51 @@ func readBytesFromForm(r *http.Request, filekey string, hexkey string, isOptiona
 
 	formFiles := r.MultipartForm.File[filekey]
 	formHex := r.PostForm.Get(hexkey)
+	formText := r.PostForm.Get(textkey)
 
-	if formHex == "" && len(formFiles) == 0 {
+	fileExists := len(formFiles) > 0
+	hexExists := formHex != ""
+	textExists := formText != ""
+
+	detectedValues := 0
+	for _, v := range []bool{fileExists, hexExists, textExists} {
+		if v {
+			detectedValues++
+		}
+	}
+
+	if detectedValues < 1 {
 		if isOptional {
 			return []byte{}, nil
 		}
 		return nil, fmt.Errorf("%s or %s is required", filekey, hexkey)
 	}
 
-	if formHex != "" && len(formFiles) > 0 {
-		return nil, errors.New("only one representation is allowed, use file or hex")
+	if detectedValues > 1 {
+		return nil, errors.New("only one representation is allowed, choose file or hex or text if possible")
 	}
 
-	var signature []byte
+	var content []byte
 	var fileAttachment io.ReadCloser
-	if len(formFiles) > 0 {
+	if fileExists {
 		fileAttachment, err = formFiles[0].Open()
 		if err != nil {
 			return nil, fmt.Errorf("failed to open file: %w", err)
 		}
 		defer fileAttachment.Close()
-		signature, err = io.ReadAll(fileAttachment)
+		content, err = io.ReadAll(fileAttachment)
 		if err != nil {
 			return nil, fmt.Errorf("failed to read attachment: %w", err)
 		}
-	} else {
-		signature, err = hex.DecodeString(formHex)
+	} else if hexExists {
+		content, err = hex.DecodeString(formHex)
 		if err != nil {
 			return nil, fmt.Errorf("failed to read hex: %w", err)
 		}
+	} else if textExists {
+		content = []byte(formText)
 	}
-	return signature, nil
+	return content, nil
 }
 
 type ApiError struct {
