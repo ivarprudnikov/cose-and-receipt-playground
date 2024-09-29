@@ -70,28 +70,27 @@ func headerKeyFromString(key string) any {
 	return detectedKey
 }
 
-func setValInAny(src *any, key any, value any, ignoreIfExists bool) *any {
-	fmt.Printf("setValInAny src pointer %p val %v k:%v v:%v\n", src, *src, key, value)
+func setValInAny(src *any, key any, value any, ignoreIfExists bool) error {
 	if obj, ok := (*src).(map[any]any); ok { // check if this is a map
 		if _, ok := obj[key]; !ok || !ignoreIfExists {
 			obj[key] = value
 		}
-		return src
-	} else if slice, ok := (*src).([]any); ok { // check if this is a slice
+		return nil
+	} else if slice, ok := (*src).(*[]any); ok { // check if this is a slice
 		if idx, ok := key.(int); ok {
-			if idx >= len(slice) { // if the index is out of bounds we need to append
-				slice = append(slice, value) // FIXME
+			if idx >= len(*slice) { // if the index is out of bounds we need to append
+				*slice = append(*slice, make([]any, idx-len(*slice)+1)...)
+				(*slice)[idx] = value
 			} else if !ignoreIfExists {
-				slice[idx] = value
+				(*slice)[idx] = value
 			}
-			sliceToAny := (any)(slice)
-			*src = sliceToAny
-
-			fmt.Printf("setValInAny src after %p val %v \n", src, *src)
-			return &sliceToAny
+			*src = (any)(slice)
+			return nil
+		} else {
+			return fmt.Errorf("invalid key to be used in array %v", key)
 		}
 	}
-	panic("unexpected type")
+	return fmt.Errorf("unexpected pointer type %T with val: %v", *src, *src)
 }
 
 func getValInAny(src *any, key any) *any {
@@ -100,52 +99,49 @@ func getValInAny(src *any, key any) *any {
 		if val, ok := obj[key]; ok {
 			child = &val
 		}
-	} else if slice, ok := (*src).([]any); ok { // check if this is a slice
+	} else if slice, ok := (*src).(*[]any); ok { // check if this is a slice
 		if idx, ok := key.(int); ok {
-			if idx < len(slice) {
-				val := slice[idx]
+			if idx < len(*slice) {
+				val := (*slice)[idx]
 				child = &val
 			}
 		}
 	}
-	fmt.Printf("getValInAny src %p child %p \n", src, child)
 	return child
 }
 
-func AddHeaders(source cose.ProtectedHeader, customHeaders map[string]string) cose.ProtectedHeader {
+func AddHeaders(source cose.ProtectedHeader, customHeaders map[string]string) error {
 	// convert to any to be able to manipulate it
 	sourceMap := (map[any]any)(source)
-	fmt.Printf("sourceMap %p \n", &sourceMap)
 	sourceAny := (any)(sourceMap)
-	fmt.Printf("sourceAny %p \n", &sourceAny)
-
 	for key, nestedValue := range customHeaders {
 		// get the pointer to be able to move it around
 		current := &sourceAny
-		fmt.Printf("current %p \n", current)
 		// convert string to rune slice to be able to properly iterate over each character
 		keyRunes := []rune(key)
-		// use two pointers to iterate over the key
-		// the gap between the pointers indicates the key
+		// use two pointers to scan over the key
 		for from := 0; from < len(keyRunes); from++ {
 			for to := from; to < len(keyRunes) && to >= from; to++ {
 				if to == len(keyRunes)-1 {
 					// if we reached the end of the key
 					// we can set the end value
-
 					// we are either in a map or a slice
 					if string(keyRunes[to]) == "]" {
 						// extract the index
 						index, err := strconv.Atoi(string(keyRunes[from:to]))
 						if err != nil {
-							// TODO: test this
-							log.Printf("conflict: %v is not a slice index\n", string(keyRunes[from:to]))
-							break
+							return fmt.Errorf("conflict: %v is not a valid index", string(keyRunes[from:to]))
 						}
-						current = setValInAny(current, index, nestedValue, false)
+						err = setValInAny(current, index, nestedValue, false)
+						if err != nil {
+							return fmt.Errorf("failed to set array value %v", nestedValue)
+						}
 					} else {
 						detectedKey := headerKeyFromString(string(keyRunes[from:]))
-						current = setValInAny(current, detectedKey, nestedValue, false)
+						err := setValInAny(current, detectedKey, nestedValue, false)
+						if err != nil {
+							return fmt.Errorf("failed to set object value %v under key %v", nestedValue, detectedKey)
+						}
 					}
 					from = to + 1
 				} else if string(keyRunes[to]) == "." {
@@ -155,32 +151,26 @@ func AddHeaders(source cose.ProtectedHeader, customHeaders map[string]string) co
 					// we use the key to create a map if one doesn't exist
 					// then we move the pointer to the value to the map and move the pointers
 					detectedKey := headerKeyFromString(string(keyRunes[from:to]))
-					current = setValInAny(current, detectedKey, map[any]any{}, true)
+					setValInAny(current, detectedKey, map[any]any{}, true)
 					current = getValInAny(current, detectedKey)
 					from = to + 1 // skip the dot
 				} else if string(keyRunes[to]) == "[" {
 					if to == 0 {
-						panic("header key cannot start with a square bracket")
+						return fmt.Errorf("header key cannot start with a square bracket")
 					}
 					// FIXME: check if in array
 
 					// square bracket means we have a slice
 					detectedKey := headerKeyFromString(string(keyRunes[from:to]))
 					// set it if it does not exist
-					current = setValInAny(current, detectedKey, make([]any, 0), true)
+					setValInAny(current, detectedKey, &[]any{}, true)
 					current = getValInAny(current, detectedKey)
 					from = to + 1 // skip the bracket
 				}
 			}
 		}
 	}
-
-	fmt.Printf("sourceAny after %p \n", &sourceAny)
-	// convert back to the original type
-	if sourceMap, ok := sourceAny.(map[any]any); ok {
-		return (cose.ProtectedHeader)(sourceMap)
-	}
-	return source
+	return nil
 }
 
 func CreateSignature(payload []byte, customHeaders map[string]string, hostport string) ([]byte, error) {
@@ -189,8 +179,10 @@ func CreateSignature(payload []byte, customHeaders map[string]string, hostport s
 		return nil, err
 	}
 	// create message header
+	protected := DefaultHeaders(hostport)
+	AddHeaders(protected, customHeaders)
 	headers := cose.Headers{
-		Protected: AddHeaders(DefaultHeaders(hostport), customHeaders),
+		Protected: protected,
 	}
 
 	// sign and marshal message

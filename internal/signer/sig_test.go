@@ -13,19 +13,137 @@ import (
 	"github.com/veraison/go-cose"
 )
 
-func Test_AddHeaders(t *testing.T) {
+func Test_AddHeaders_Grouped(t *testing.T) {
 	initial := cose.ProtectedHeader{}
 	signer.AddHeaders(initial, map[string]string{
-		// "3":     "content/type",
+		"3":     "content/type",
 		"33[0]": "first",
-		// "15.1":  "issuer",
-		// "15.2":  "subject",
-		// "15.3":  "audience",
+		"33[1]": "second",
+		"33[5]": "last",
+		"15.1":  "issuer",
+		"15.2":  "subject",
+		"15.3":  "audience",
 	})
-	// require.Nil(t, initial)
-	// require.Equal(t, interface{}("content/type"), initial[cose.HeaderLabelContentType])
-	// require.Equal(t, initial[int64(15)], interface{}(map[interface{}]interface{}{int64(1): "issuer", int64(2): "subject", int64(3): "audience"}))
-	require.Equal(t, interface{}([]interface{}{"first"}), initial[cose.HeaderLabelX5Chain])
+	require.NotNil(t, initial)
+	require.Equal(t, interface{}("content/type"), initial[cose.HeaderLabelContentType])
+	require.Equal(t, interface{}(map[interface{}]interface{}{int64(1): "issuer", int64(2): "subject", int64(3): "audience"}), initial[int64(15)])
+	require.Equal(t, interface{}(&[]interface{}{"first", "second", nil, nil, nil, "last"}), initial[cose.HeaderLabelX5Chain])
+}
+
+func Test_AddHeaders(t *testing.T) {
+	type test struct {
+		initial     cose.ProtectedHeader
+		kIn         string
+		vIn         string
+		kOut        any
+		vOut        any
+		errContains string
+	}
+
+	tests := []test{
+		{
+			initial:     cose.ProtectedHeader{},
+			kIn:         "[1]",
+			vIn:         "foo",
+			errContains: "header key cannot start with a square bracket",
+		},
+		{
+			initial: cose.ProtectedHeader{},
+			kIn:     "3",
+			vIn:     "content/type",
+			kOut:    cose.HeaderLabelContentType,
+			vOut:    "content/type",
+		},
+		{
+			initial: cose.ProtectedHeader{},
+			kIn:     "foo",
+			vIn:     "bar",
+			kOut:    "foo",
+			vOut:    "bar",
+		},
+		{
+			initial:     cose.ProtectedHeader{},
+			kIn:         "foo[bar]",
+			vIn:         "baz",
+			errContains: "conflict: bar is not a valid index",
+		},
+		{
+			initial: cose.ProtectedHeader{},
+			kIn:     "33[0]",
+			vIn:     "first",
+			kOut:    cose.HeaderLabelX5Chain,
+			vOut:    &[]any{"first"},
+		},
+		{
+			initial: cose.ProtectedHeader{},
+			kIn:     "33[2]",
+			vIn:     "last",
+			kOut:    cose.HeaderLabelX5Chain,
+			vOut:    &[]any{nil, nil, "last"},
+		},
+		{
+			initial: cose.ProtectedHeader{cose.HeaderLabelX5Chain: &[]any{"first"}},
+			kIn:     "33[0]",
+			vIn:     "overwrite",
+			kOut:    cose.HeaderLabelX5Chain,
+			vOut:    &[]any{"overwrite"},
+		},
+		{
+			initial: cose.ProtectedHeader{cose.HeaderLabelX5Chain: &[]any{"first"}},
+			kIn:     "33[2]",
+			vIn:     "third",
+			kOut:    cose.HeaderLabelX5Chain,
+			vOut:    &[]any{"first", nil, "third"},
+		},
+		{
+			initial: cose.ProtectedHeader{},
+			kIn:     "15.1",
+			vIn:     "issuer",
+			kOut:    int64(15),
+			vOut:    map[any]any{int64(1): "issuer"},
+		},
+		{
+			initial: cose.ProtectedHeader{int64(15): map[any]any{int64(1): "issuer"}},
+			kIn:     "15.1",
+			vIn:     "overwrite",
+			kOut:    int64(15),
+			vOut:    map[any]any{int64(1): "overwrite"},
+		},
+		{
+			initial: cose.ProtectedHeader{int64(15): map[any]any{int64(1): "issuer"}},
+			kIn:     "15.2",
+			vIn:     "addition",
+			kOut:    int64(15),
+			vOut:    map[any]any{int64(1): "issuer", int64(2): "addition"},
+		},
+		{
+			initial: cose.ProtectedHeader{},
+			kIn:     "a.b.c.d",
+			vIn:     "nested",
+			kOut:    "a",
+			vOut:    map[any]any{"b": map[any]any{"c": map[any]any{"d": "nested"}}},
+		},
+		// {
+		// 	initial: cose.ProtectedHeader{},
+		// 	kIn:     "a[0]b",
+		// 	vIn:     "nestedmixed",
+		// 	kOut:    "a",
+		// 	vOut:    &[]any{map[any]any{"b": "nestedmixed"}},
+		// },
+	}
+
+	for _, tt := range tests {
+		tt := tt
+		t.Run(tt.kIn, func(t *testing.T) {
+			err := signer.AddHeaders(tt.initial, map[string]string{tt.kIn: tt.vIn})
+			if tt.errContains != "" {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), tt.errContains)
+				return
+			}
+			require.Equal(t, tt.vOut, tt.initial[tt.kOut])
+		})
+	}
 }
 
 func Test_DefaultHeaders(t *testing.T) {
