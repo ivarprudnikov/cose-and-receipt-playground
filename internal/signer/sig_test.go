@@ -13,11 +13,26 @@ import (
 	"github.com/veraison/go-cose"
 )
 
+func Test_AddHeaders(t *testing.T) {
+	initial := cose.ProtectedHeader{}
+	signer.AddHeaders(initial, map[string]string{
+		// "3":     "content/type",
+		"33[0]": "first",
+		// "15.1":  "issuer",
+		// "15.2":  "subject",
+		// "15.3":  "audience",
+	})
+	// require.Nil(t, initial)
+	// require.Equal(t, interface{}("content/type"), initial[cose.HeaderLabelContentType])
+	// require.Equal(t, initial[int64(15)], interface{}(map[interface{}]interface{}{int64(1): "issuer", int64(2): "subject", int64(3): "audience"}))
+	require.Equal(t, interface{}([]interface{}{"first"}), initial[cose.HeaderLabelX5Chain])
+}
+
 func Test_DefaultHeaders(t *testing.T) {
-	headers := signer.DefaultHeaders("application/json", "foo.bar.com:8080")
+	headers := signer.DefaultHeaders("foo.bar.com:8080")
 	require.NotNil(t, headers)
 	require.Equal(t, headers[cose.HeaderLabelAlgorithm], interface{}(cose.AlgorithmES256))
-	require.Equal(t, headers[cose.HeaderLabelContentType], interface{}("application/json"))
+	require.Equal(t, headers[cose.HeaderLabelContentType], interface{}("text/plain"))
 	kid, ok := headers[cose.HeaderLabelKeyID].([]byte)
 	require.True(t, ok)
 	require.Equal(t, kid[0], byte('#'))
@@ -32,10 +47,10 @@ func Test_DefaultHeaders(t *testing.T) {
 }
 
 func Test_PrintHeaders(t *testing.T) {
-	headers := signer.DefaultHeaders("application/json", "foo.bar.com:8080")
+	headers := signer.DefaultHeaders("foo.bar.com:8080")
 	printed := signer.PrintHeaders(headers)
 	require.Contains(t, printed, "1: ES256,")
-	require.Contains(t, printed, "3: application/json,")
+	require.Contains(t, printed, "3: text/plain,")
 	require.Contains(t, printed, "4: #")
 	require.Contains(t, printed, "391: did:web:foo.bar.com%3A8080,")
 	require.Contains(t, printed, "392: demo,")
@@ -45,7 +60,7 @@ func Test_PrintHeaders(t *testing.T) {
 }
 
 func Test_Create_Sig(t *testing.T) {
-	sig, err := signer.CreateSignature([]byte("hello world"), "foo/bar", "foo.bar.com")
+	sig, err := signer.CreateSignature([]byte("hello world"), map[string]string{"3": "foo/bar"}, "foo.bar.com")
 	require.NoError(t, err)
 	require.NotNil(t, sig)
 
@@ -68,7 +83,7 @@ func Test_Create_Sig(t *testing.T) {
 }
 
 func Test_Create_Verify_with_default_key(t *testing.T) {
-	sig, err := signer.CreateSignature([]byte("hello world"), "foo/bar", "foo.bar.com")
+	sig, err := signer.CreateSignature([]byte("hello world"), map[string]string{"3": "foo/bar"}, "foo.bar.com")
 	require.NoError(t, err)
 
 	var msg cose.Sign1Message
@@ -92,7 +107,7 @@ func Test_Create_Verify_with_did(t *testing.T) {
 
 	serverUrl := strings.TrimPrefix(tlsServer.URL, "https://")
 
-	sig, err := signer.CreateSignature([]byte("hello world"), "foo/bar", serverUrl)
+	sig, err := signer.CreateSignature([]byte("hello world"), map[string]string{"3": "foo/bar"}, serverUrl)
 	require.NoError(t, err)
 
 	err = signer.VerifySignature(sig, tlsServer.Client())

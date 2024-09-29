@@ -29,7 +29,6 @@ const MAX_FORM_SIZE = int64(32 << 20) // 32 MB
 const MAX_REQ_SEC = 2
 const MAX_REQ_BURST = 4
 const TEMPLATES_MATCH = "web/*.tmpl"
-const DEFAULT_CONTENT_TYPE = "text/plain"
 
 // templates get embedded in the binary
 //
@@ -144,7 +143,7 @@ func IndexHandler() http.HandlerFunc {
 		w.Header().Add("Content-Type", "text/html")
 
 		tmpl.ExecuteTemplate(w, "index.tmpl", map[string]interface{}{
-			"defaultHeaders": signer.PrintHeaders(signer.DefaultHeaders(DEFAULT_CONTENT_TYPE, getHostPort())),
+			"defaultHeaders": signer.PrintHeaders(signer.DefaultHeaders(getHostPort())),
 		})
 	}
 }
@@ -194,15 +193,25 @@ func SigCreateHandler() http.HandlerFunc {
 			return
 		}
 
+		kv := map[string]string{}
+		// for backwards compatibility when using contenttype field in the form
 		contentType := r.PostForm.Get("contenttype")
-		if strings.Trim(contentType, " ") == "" {
-			contentType = DEFAULT_CONTENT_TYPE
+		if strings.Trim(contentType, " ") != "" {
+			kv["3"] = contentType
+		}
+		headerKeys := r.PostForm["headerkey"]
+		headerVals := r.PostForm["headerval"]
+		for i, k := range headerKeys {
+			if i >= len(headerVals) {
+				break
+			}
+			kv[k] = headerVals[i]
 		}
 
 		payloadHash := sha256.Sum256(payloadB)
 		payloadHashHex := hex.EncodeToString(payloadHash[:])
 
-		signature, err := signer.CreateSignature(payloadB, contentType, getHostPort())
+		signature, err := signer.CreateSignature(payloadB, kv, getHostPort())
 		if err != nil {
 			sendError(w, "failed to create signature", err)
 			return
