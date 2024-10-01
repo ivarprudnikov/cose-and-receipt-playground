@@ -12,9 +12,7 @@
 
     <div class="tab-pane fade show active" id="sig-new-form" role="tabpanel" aria-labelledby="sig-new-form-tab">
         <form id="sign" class="my-4" name="sign" action="/signature/create" method="POST" enctype="multipart/form-data">
-            <div class="mb-3">
-                <p class="small">Default Cose protected headers: <code>{{ .defaultHeaders }}</code></p>
-            </div>
+            
             <div class="mb-3">
                 <label for="payloadFile" class="form-label">Payload file</label>
                 <input type="file" name="payloadfile" class="form-control" aria-describedby="payloadfileHelp"
@@ -44,35 +42,38 @@
                 <div id="payloadHelp" class="form-text">If you do not have the file to upload but just 
                     its text content then use this field.</div>
             </div>
+
             <div class="mb-3">
-                <label for="contenttype" class="form-label">Content type</label>
-                <input name="contenttype" class="form-control" aria-describedby="contenttypeHelp" id="contenttype"
-                    placeholder="text/plain"></input>
-                <div id="contenttypeHelp" class="form-text">Content type of the payload to add to the headers, defaults
-                    to "text/plain"</div>
-            </div>
 
-            <div class="input-group mb-3">
-                <span class="input-group-text">Header</span>
-                <input name="headerkey" type="text" class="form-control" placeholder="3" aria-label="3">
-                <span class="input-group-text">Value</span>
-                <input name="headerval" type="text" class="form-control" placeholder="text/plain" aria-label="text/plain">
-            </div>
+                <div class="input-group input-group-sm mb-3">
+                    <span class="input-group-text">Header</span>
+                    <input name="headerkey" type="text" class="form-control" placeholder="3" aria-label="3">
+                    <span class="input-group-text">Value</span>
+                    <input name="headerval" type="text" class="form-control" placeholder="text/plain" aria-label="text/plain">
+                </div>
 
-            <div class="input-group mb-3">
-                <span class="input-group-text">Header</span>
-                <input name="headerkey" type="text" class="form-control" placeholder="3" aria-label="3">
-                <span class="input-group-text">Value</span>
-                <input name="headerval" type="text" class="form-control" placeholder="text/plain" aria-label="text/plain">
-            </div>
+                <div class="input-group input-group-sm mb-3">
+                    <span class="input-group-text">Header</span>
+                    <input name="headerkey" type="text" class="form-control" placeholder="33[0]" aria-label="33[0]">
+                    <span class="input-group-text">Value</span>
+                    <input name="headerval" type="text" class="form-control" placeholder="b64value" aria-label="b64value">
+                </div>
 
-            <div class="input-group mb-3">
-                <span class="input-group-text">Header</span>
-                <input name="headerkey" type="text" class="form-control" placeholder="3" aria-label="3">
-                <span class="input-group-text">Value</span>
-                <input name="headerval" type="text" class="form-control" placeholder="text/plain" aria-label="text/plain">
-            </div>
+                <div class="input-group input-group-sm mb-3">
+                    <span class="input-group-text">Header</span>
+                    <input name="headerkey" type="text" class="form-control" placeholder="15.1" aria-label="15.1">
+                    <span class="input-group-text">Value</span>
+                    <input name="headerval" type="text" class="form-control" placeholder="CWT claim issuer" aria-label="CWT claim issuer">
+                </div>
 
+                <div id="customheaderHelp" class="form-text">Header keys are usually ints 
+                    (see <a href="https://www.iana.org/assignments/cose/cose.xhtml">IANA</a>).
+                    Use dot notation to create maps and brackets for arrays (with limitations).
+                    To add more use API instead. Default Cose protected headers: 
+                    <code>{{ .defaultHeaders }}</code>
+                </div>
+
+            </div>
 
             <button type="submit" class="btn btn-primary">Create and download signature</button>
         </form>
@@ -82,9 +83,32 @@
         <div class="card text-bg-light my-4">
             <div class="card-header">Create with cURL</div>
             <div class="card-body">
+
+                <p class="card-text">Payload as a file:</p>
+                <pre class="card-text">curl -L 'https://playground-cose-eastus-api.azurewebsites.net/signature/create' -X POST \
+                  --form payloadfile='@./my/payload/file.txt' \
+                  -o signature.cose</pre>
+                <p class="card-text">Payload as a hex value:</p>
+                <pre class="card-text">curl -L 'https://playground-cose-eastus-api.azurewebsites.net/signature/create' -X POST \
+                  --form payloadhex='d2845828a301260446666f6f...17219018758186469643a77' \
+                  -o signature.cose</pre>
+                <p class="card-text">Payload as plain text:</p>
                 <pre class="card-text">curl -L 'https://playground-cose-eastus-api.azurewebsites.net/signature/create' -X POST \
                   --form payload='{"foo":"bar"}' \
-                  --form contenttype='application/json' \
+                  --form headerkey='3' \
+                  --form headerval='application/json' \
+                  -o signature.cose</pre>
+                <p class="card-text">Adding multiple headers:</p>
+                <pre class="card-text">curl -L 'https://playground-cose-eastus-api.azurewebsites.net/signature/create' -X POST \
+                  --form payloadfile='@./my/payload/file' \
+                  --form headerkey='3' \
+                  --form headerval='some/type' \
+                  --form headerkey='15.1' \
+                  --form headerval='did:x509:0:sha256:WE4P5dd8DnLHSkyHaIjhp4udlkF9LqoKwCvu9gl38jk::subject:C:US:ST:California:O:My%20Organisation' \
+                  --form headerkey='33[0]' \
+                  --form headerval='base64Cert' \
+                  --form headerkey='33[1]' \
+                  --form headerval='anotherBase64Cert' \
                   -o signature.cose</pre>
             </div>
         </div>

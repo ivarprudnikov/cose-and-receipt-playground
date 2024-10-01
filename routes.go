@@ -194,7 +194,7 @@ func SigCreateHandler() http.HandlerFunc {
 		}
 
 		kv := map[string]string{}
-		// for backwards compatibility when using contenttype field in the form
+		// @Deprecated use for backwards compatibility when using contenttype field in the form
 		contentType := r.PostForm.Get("contenttype")
 		if strings.Trim(contentType, " ") != "" {
 			kv["3"] = contentType

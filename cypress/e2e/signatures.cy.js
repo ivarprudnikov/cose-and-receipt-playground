@@ -21,7 +21,8 @@ describe('signature tests', () => {
     cy.get('#sign').within(() => {
       cy.get('[aria-controls="payloadTextSection"]').should('be.visible').click()
       cy.get('#payload', { timeout: 1000 }).type('foobar')
-      cy.get('#contenttype').type('text/plain')
+      cy.get('input[name="headerkey"]').first().type('3')
+      cy.get('input[name="headerval"]').first().type('text/plain')
       cy.get('.btn-primary').should('be.visible').click()
     })
 
