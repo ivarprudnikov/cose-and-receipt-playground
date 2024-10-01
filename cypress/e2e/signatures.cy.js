@@ -20,9 +20,9 @@ describe('signature tests', () => {
 
     cy.get('#sign').within(() => {
       cy.get('[aria-controls="payloadTextSection"]').should('be.visible').click()
-      cy.get('#payload', { timeout: 1000 }).type('foobar')
+      cy.get('#payload', { timeout: 1000 }).type('hello world')
       cy.get('input[name="headerkey"]').first().type('3')
-      cy.get('input[name="headerval"]').first().type('text/plain')
+      cy.get('input[name="headerval"]').first().type('application/json')
       cy.get('.btn-primary').should('be.visible').click()
     })
 
@@ -31,6 +31,7 @@ describe('signature tests', () => {
       .then(() => {
         cy.wrap(sigBody.byteLength).should('be.greaterThan',0)
         cy.wrap(sigHex).should('be.a', 'string').should('not.be.empty')
+        cy.log('signature hex:', sigHex)
       })
     
   })
