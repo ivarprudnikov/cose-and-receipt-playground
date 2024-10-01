@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	main "github.com/ivarprudnikov/cose-and-receipt-playground"
+	"github.com/stretchr/testify/require"
 	"github.com/veraison/go-cose"
 )
 
@@ -45,9 +46,7 @@ func TestIndex(t *testing.T) {
 			w := httptest.NewRecorder()
 			handler.ServeHTTP(w, req)
 			res := w.Result()
-			if res.StatusCode != tc.status {
-				t.Errorf("expected status code %v got %v", tc.status, res.StatusCode)
-			}
+			require.Equal(t, tc.status, res.StatusCode)
 		})
 	}
 }
@@ -58,19 +57,13 @@ func TestDidDoc(t *testing.T) {
 	w := httptest.NewRecorder()
 	handler.ServeHTTP(w, req)
 	res := w.Result()
-	if res.StatusCode != http.StatusOK {
-		t.Errorf("expected status code %v got %v", http.StatusOK, res.StatusCode)
-	}
+	require.Equal(t, http.StatusOK, res.StatusCode)
 	defer res.Body.Close()
 	body, err := io.ReadAll(res.Body)
-	if err != nil {
-		t.Errorf("error reading response body: %v", err)
-	}
-	var diddoc map[string]interface{}
+	require.NoError(t, err)
+	var diddoc map[string]any
 	err = json.Unmarshal(body, &diddoc)
-	if err != nil {
-		t.Fatalf("Unexpected error %v", err)
-	}
+	require.NoError(t, err)
 	if _, ok := diddoc["assertionMethod"]; !ok {
 		t.Errorf("expected id key in diddoc %v", diddoc)
 	}
@@ -79,11 +72,11 @@ func TestDidDoc(t *testing.T) {
 func TestSignatureCreate(t *testing.T) {
 	type test struct {
 		name           string
-		formValues     map[string]string
+		formValues     map[string][]string
 		formFiles      map[string][]byte
 		status         int
-		coseHeaderKeys []interface{}
-		coseHeaderVals []interface{}
+		coseHeaderKeys []any
+		coseHeaderVals []any
 	}
 	tests := []test{
 		{
@@ -92,19 +85,19 @@ func TestSignatureCreate(t *testing.T) {
 		},
 		{
 			name:           "create from text",
-			formValues:     map[string]string{"payload": "hello"},
+			formValues:     map[string][]string{"payload": {"hello"}},
 			status:         http.StatusOK,
-			coseHeaderKeys: []interface{}{int64(1), int64(3), int64(4), int64(391), int64(392), int64(393)},
-			coseHeaderVals: []interface{}{"", "text/plain", "", "did:web:localhost%3A8080", "demo", ""},
+			coseHeaderKeys: []any{int64(1), int64(3), int64(4), int64(391), int64(392), int64(393)},
+			coseHeaderVals: []any{"", "text/plain", "", "did:web:localhost%3A8080", "demo", ""},
 		},
 		{
 			name:       "create from hex",
-			formValues: map[string]string{"payloadhex": "68656c6c6f"},
+			formValues: map[string][]string{"payloadhex": {"68656c6c6f"}},
 			status:     http.StatusOK,
 		},
 		{
 			name:       "fails with too many payloads",
-			formValues: map[string]string{"payload": "hello", "payloadhex": "68656c6c6f"},
+			formValues: map[string][]string{"payload": {"hello"}, "payloadhex": {"68656c6c6f"}},
 			status:     http.StatusBadRequest,
 		},
 		{
@@ -114,16 +107,23 @@ func TestSignatureCreate(t *testing.T) {
 		},
 		{
 			name:       "fails with too many payloads including file",
-			formValues: map[string]string{"payload": "hello"},
+			formValues: map[string][]string{"payload": {"hello"}},
 			formFiles:  map[string][]byte{"payloadfile": []byte("hello")},
 			status:     http.StatusBadRequest,
 		},
 		{
 			name:           "uses custom content type",
-			formValues:     map[string]string{"payload": "hello", "contenttype": "foo/bar"},
+			formValues:     map[string][]string{"payload": {"hello"}, "contenttype": {"foo/bar"}},
 			status:         http.StatusOK,
-			coseHeaderKeys: []interface{}{int64(3)},
-			coseHeaderVals: []interface{}{"foo/bar"},
+			coseHeaderKeys: []any{int64(3)},
+			coseHeaderVals: []any{"foo/bar"},
+		},
+		{
+			name:           "adds custom headers",
+			formValues:     map[string][]string{"payload": {"hello"}, "headerkey": {"33[0]", "33[1]", "33[2]"}, "headerval": {"a", "b", "c", "d", "e"}},
+			status:         http.StatusOK,
+			coseHeaderKeys: []any{int64(33)},
+			coseHeaderVals: []any{[]any{"a", "b", "c"}},
 		},
 	}
 
@@ -135,17 +135,15 @@ func TestSignatureCreate(t *testing.T) {
 			reqBody := new(bytes.Buffer)
 			mp := multipart.NewWriter(reqBody)
 			for key, val := range tc.formValues {
-				mp.WriteField(key, val)
+				for _, v := range val {
+					mp.WriteField(key, v)
+				}
 			}
 			for key, val := range tc.formFiles {
 				part, err := mp.CreateFormFile(key, key)
-				if err != nil {
-					t.Errorf("error creating form file: %v", err)
-				}
+				require.NoError(t, err)
 				_, err = part.Write(val)
-				if err != nil {
-					t.Errorf("error writing form file: %v", err)
-				}
+				require.NoError(t, err)
 			}
 			mp.Close()
 
@@ -155,22 +153,16 @@ func TestSignatureCreate(t *testing.T) {
 			w := httptest.NewRecorder()
 			handler.ServeHTTP(w, req)
 			res := w.Result()
-			if res.StatusCode != tc.status {
-				t.Errorf("expected status code %v got %v", tc.status, res.StatusCode)
-			}
+			require.Equal(t, tc.status, res.StatusCode)
 			if res.StatusCode != http.StatusOK {
 				return
 			}
 			defer res.Body.Close()
 			body, err := io.ReadAll(res.Body)
-			if err != nil {
-				t.Errorf("error reading response body: %v", err)
-			}
+			require.NoError(t, err)
 			var sig cose.Sign1Message
 			err = sig.UnmarshalCBOR(body)
-			if err != nil {
-				t.Errorf("error unmarshaling response body: %v", err)
-			}
+			require.NoError(t, err)
 
 			for idx, key := range tc.coseHeaderKeys {
 				v, ok := sig.Headers.Protected[key]
@@ -178,9 +170,7 @@ func TestSignatureCreate(t *testing.T) {
 					t.Errorf("expected key %v in protected headers %v", key, sig.Headers.Protected)
 				}
 				if len(tc.coseHeaderVals) > 0 && tc.coseHeaderVals[idx] != "" {
-					if v != tc.coseHeaderVals[idx] {
-						t.Errorf("expected value %v for key %v in protected headers %v", tc.coseHeaderVals[idx], key, sig.Headers.Protected)
-					}
+					require.Equal(t, tc.coseHeaderVals[idx], v)
 				}
 			}
 		})

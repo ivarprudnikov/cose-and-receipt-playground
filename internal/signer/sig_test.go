@@ -123,13 +123,12 @@ func Test_AddHeaders(t *testing.T) {
 			kOut:    "a",
 			vOut:    map[any]any{"b": map[any]any{"c": map[any]any{"d": "nested"}}},
 		},
-		// {
-		// 	initial: cose.ProtectedHeader{},
-		// 	kIn:     "a[0]b",
-		// 	vIn:     "nestedmixed",
-		// 	kOut:    "a",
-		// 	vOut:    &[]any{map[any]any{"b": "nestedmixed"}},
-		// },
+		{
+			initial:     cose.ProtectedHeader{},
+			kIn:         "a[0]b",
+			vIn:         "nestedmixed",
+			errContains: "failed to set object value nestedmixed under key 0]b",
+		},
 	}
 
 	for _, tt := range tests {
@@ -141,6 +140,7 @@ func Test_AddHeaders(t *testing.T) {
 				require.Contains(t, err.Error(), tt.errContains)
 				return
 			}
+			require.NoError(t, err)
 			require.Equal(t, tt.vOut, tt.initial[tt.kOut])
 		})
 	}
