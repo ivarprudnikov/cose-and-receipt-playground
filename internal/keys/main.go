@@ -135,16 +135,16 @@ func (s *KeyStore) GetPubKey() crypto.PublicKey {
 	return s.privateKey.Public()
 }
 
-func (s *KeyStore) GetPublicKeyIdDefault() string {
+func (s *KeyStore) GetPublicKeyId() string {
 	return PubKeyCertHash(s.GetPubKey())
 }
 
-func (s *KeyStore) GetCoseSignerDefault() (cose.Signer, error) {
+func (s *KeyStore) GetCoseSigner() (cose.Signer, error) {
 	return cose.NewSigner(cose.AlgorithmES256, s.privateKey)
 }
 
-func (s *KeyStore) GetCoseVerifierDefault() (cose.Verifier, error) {
-	return cose.NewVerifier(cose.AlgorithmES256, s.privateKey.Public())
+func (s *KeyStore) GetCoseVerifier() (cose.Verifier, error) {
+	return cose.NewVerifier(cose.AlgorithmES256, s.GetPubKey())
 }
 
 func PubKeyCertHash(k crypto.PublicKey) string {

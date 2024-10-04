@@ -216,7 +216,7 @@ func Test_Create_Verify_with_default_key(t *testing.T) {
 	err = msg.UnmarshalCBOR(sig)
 	require.NoError(t, err)
 
-	verifier, err := tmpKeystore.GetCoseVerifierDefault()
+	verifier, err := tmpKeystore.GetCoseVerifier()
 	require.NoError(t, err)
 
 	err = msg.Verify(nil, verifier)

@@ -43,12 +43,12 @@ func GetCountersignHeaders(hostport string, pubKeyId string) cose.Headers {
 
 // Using full COSE_Countersignature aka cose.Sign1Message
 func Countersign(target cose.Sign1Message, keystore *keys.KeyStore, hostport string, embedInSignature bool) ([]byte, error) {
-	signer, err := keystore.GetCoseSignerDefault()
+	signer, err := keystore.GetCoseSigner()
 	if err != nil {
 		return nil, err
 	}
 	cs := cose.Sign1Message{
-		Headers: GetCountersignHeaders(hostport, keystore.GetPublicKeyIdDefault()),
+		Headers: GetCountersignHeaders(hostport, keystore.GetPublicKeyId()),
 		Payload: []byte{},
 	}
 	tbsCbor, err := ToBeSigned(target, cs.Headers)
@@ -84,7 +84,7 @@ func Countersign(target cose.Sign1Message, keystore *keys.KeyStore, hostport str
 }
 
 func Verify(countersignature cose.Sign1Message, target cose.Sign1Message, keystore *keys.KeyStore) error {
-	verifier, err := keystore.GetCoseVerifierDefault()
+	verifier, err := keystore.GetCoseVerifier()
 	if err != nil {
 		return err
 	}

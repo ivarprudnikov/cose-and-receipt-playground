@@ -174,12 +174,12 @@ func AddHeaders(source cose.ProtectedHeader, customHeaders map[string]string) er
 }
 
 func CreateSignature(payload []byte, customHeaders map[string]string, hostport string, keystore *keys.KeyStore) ([]byte, error) {
-	signer, err := keystore.GetCoseSignerDefault()
+	signer, err := keystore.GetCoseSigner()
 	if err != nil {
 		return nil, err
 	}
 	// create message header
-	protected := DefaultHeaders(hostport, keystore.GetPublicKeyIdDefault())
+	protected := DefaultHeaders(hostport, keystore.GetPublicKeyId())
 	AddHeaders(protected, customHeaders)
 	headers := cose.Headers{
 		Protected: protected,
