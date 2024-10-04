@@ -88,7 +88,7 @@ func Test_Did_ResolvePublicKey(t *testing.T) {
 	serverUrl := strings.TrimPrefix(tlsServer.URL, "https://")
 	serverUrl = strings.ReplaceAll(serverUrl, ":", "%3A")
 
-	did := keys.Did{Issuer: "did:web:" + serverUrl, KeyId: keys.GetPublicKeyIdDefault(), Client: tlsServer.Client()}
+	did := keys.Did{Issuer: "did:web:" + serverUrl, KeyId: keys.PubKeyCertHash(privateKey.Public()), Client: tlsServer.Client()}
 	parsedPubKey, err := did.ResolvePublicKey()
 	require.NoError(t, err)
 

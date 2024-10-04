@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	main "github.com/ivarprudnikov/cose-and-receipt-playground"
+	"github.com/ivarprudnikov/cose-and-receipt-playground/internal/keys"
 	"github.com/stretchr/testify/require"
 	"github.com/veraison/go-cose"
 )
@@ -52,7 +53,11 @@ func TestIndex(t *testing.T) {
 }
 
 func TestDidDoc(t *testing.T) {
-	handler := main.DidHandler()
+	tmpDir := t.TempDir()
+	tmpKeystore, err := keys.NewKeyStoreIn(tmpDir)
+	require.NoError(t, err)
+
+	handler := main.DidHandler(tmpKeystore)
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	w := httptest.NewRecorder()
 	handler.ServeHTTP(w, req)
@@ -127,7 +132,10 @@ func TestSignatureCreate(t *testing.T) {
 		},
 	}
 
-	handler := main.SigCreateHandler()
+	tmpDir := t.TempDir()
+	tmpKeystore, err := keys.NewKeyStoreIn(tmpDir)
+	require.NoError(t, err)
+	handler := main.SigCreateHandler(tmpKeystore)
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {

@@ -147,13 +147,13 @@ func Test_AddHeaders(t *testing.T) {
 }
 
 func Test_DefaultHeaders(t *testing.T) {
-	headers := signer.DefaultHeaders("foo.bar.com:8080")
+	headers := signer.DefaultHeaders("foo.bar.com:8080", "foobar")
 	require.NotNil(t, headers)
 	require.Equal(t, headers[cose.HeaderLabelAlgorithm], interface{}(cose.AlgorithmES256))
 	require.Equal(t, headers[cose.HeaderLabelContentType], interface{}("text/plain"))
 	kid, ok := headers[cose.HeaderLabelKeyID].([]byte)
 	require.True(t, ok)
-	require.Equal(t, kid[0], byte('#'))
+	require.Equal(t, kid, []byte("#foobar"))
 	require.Equal(t, headers[signer.ISSUER_HEADER_KEY], interface{}("did:web:foo.bar.com%3A8080"))
 	require.Equal(t, headers[signer.ISSUER_HEADER_FEED], interface{}("demo"))
 
@@ -165,11 +165,11 @@ func Test_DefaultHeaders(t *testing.T) {
 }
 
 func Test_PrintHeaders(t *testing.T) {
-	headers := signer.DefaultHeaders("foo.bar.com:8080")
+	headers := signer.DefaultHeaders("foo.bar.com:8080", "foobar")
 	printed := signer.PrintHeaders(headers)
 	require.Contains(t, printed, "1: ES256,")
 	require.Contains(t, printed, "3: text/plain,")
-	require.Contains(t, printed, "4: #")
+	require.Contains(t, printed, "4: #foobar")
 	require.Contains(t, printed, "391: did:web:foo.bar.com%3A8080,")
 	require.Contains(t, printed, "392: demo,")
 	require.Contains(t, printed, "issuance_ts: ")
@@ -178,7 +178,11 @@ func Test_PrintHeaders(t *testing.T) {
 }
 
 func Test_Create_Sig(t *testing.T) {
-	sig, err := signer.CreateSignature([]byte("hello world"), map[string]string{"3": "foo/bar"}, "foo.bar.com")
+	tmpDir := t.TempDir()
+	tmpKeystore, err := keys.NewKeyStoreIn(tmpDir)
+	require.NoError(t, err)
+
+	sig, err := signer.CreateSignature([]byte("hello world"), map[string]string{"3": "foo/bar"}, "foo.bar.com", tmpKeystore)
 	require.NoError(t, err)
 	require.NotNil(t, sig)
 
@@ -201,14 +205,18 @@ func Test_Create_Sig(t *testing.T) {
 }
 
 func Test_Create_Verify_with_default_key(t *testing.T) {
-	sig, err := signer.CreateSignature([]byte("hello world"), map[string]string{"3": "foo/bar"}, "foo.bar.com")
+	tmpDir := t.TempDir()
+	tmpKeystore, err := keys.NewKeyStoreIn(tmpDir)
+	require.NoError(t, err)
+
+	sig, err := signer.CreateSignature([]byte("hello world"), map[string]string{"3": "foo/bar"}, "foo.bar.com", tmpKeystore)
 	require.NoError(t, err)
 
 	var msg cose.Sign1Message
 	err = msg.UnmarshalCBOR(sig)
 	require.NoError(t, err)
 
-	verifier, err := keys.GetCoseVerifierDefault()
+	verifier, err := tmpKeystore.GetCoseVerifierDefault()
 	require.NoError(t, err)
 
 	err = msg.Verify(nil, verifier)
@@ -216,8 +224,12 @@ func Test_Create_Verify_with_default_key(t *testing.T) {
 }
 
 func Test_Create_Verify_with_did(t *testing.T) {
+	tmpDir := t.TempDir()
+	tmpKeystore, err := keys.NewKeyStoreIn(tmpDir)
+	require.NoError(t, err)
+
 	tlsServer := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		didDoc, err := keys.CreateDoc(strings.ReplaceAll(r.Host, ":", "%3A"), keys.GetKeyDefault().Public())
+		didDoc, err := keys.CreateDoc(strings.ReplaceAll(r.Host, ":", "%3A"), tmpKeystore.GetPubKey())
 		require.NoError(t, err)
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(didDoc))
@@ -225,7 +237,7 @@ func Test_Create_Verify_with_did(t *testing.T) {
 
 	serverUrl := strings.TrimPrefix(tlsServer.URL, "https://")
 
-	sig, err := signer.CreateSignature([]byte("hello world"), map[string]string{"3": "foo/bar"}, serverUrl)
+	sig, err := signer.CreateSignature([]byte("hello world"), map[string]string{"3": "foo/bar"}, serverUrl, tmpKeystore)
 	require.NoError(t, err)
 
 	err = signer.VerifySignature(sig, tlsServer.Client())

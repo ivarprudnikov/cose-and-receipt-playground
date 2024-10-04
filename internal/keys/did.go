@@ -15,6 +15,7 @@ import (
 func CreateDoc(hostport string, publicKey crypto.PublicKey) (string, error) {
 
 	hostport = strings.ReplaceAll(hostport, ":", "%3A")
+	pubKeyId := PubKeyCertHash(publicKey)
 
 	key, err := jwk.New(publicKey)
 	if err != nil {
@@ -24,7 +25,7 @@ func CreateDoc(hostport string, publicKey crypto.PublicKey) (string, error) {
 		return "", fmt.Errorf(fmt.Sprintf("expected jwk.SymmetricKey, got %T\n", key), err)
 	}
 
-	key.Set(jwk.KeyIDKey, GetPublicKeyIdDefault())
+	key.Set(jwk.KeyIDKey, pubKeyId)
 	buf, err := json.MarshalIndent(key, "", "  ")
 	if err != nil {
 		return "", fmt.Errorf("failed to marshal key into JSON: %w", err)
@@ -43,7 +44,7 @@ func CreateDoc(hostport string, publicKey crypto.PublicKey) (string, error) {
 			"controller": "did:web:%s",
 			"publicKeyJwk": %s
 		}]
-	}`, hostport, hostport, GetPublicKeyIdDefault(), hostport, buf)
+	}`, hostport, hostport, pubKeyId, hostport, buf)
 
 	return didDoc, nil
 }

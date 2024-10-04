@@ -45,13 +45,13 @@ func init() {
 	}
 }
 
-func AddRoutes(mux *http.ServeMux) {
+func AddRoutes(mux *http.ServeMux, keystore *keys.KeyStore) {
 	pre := newAppMiddleware()
-	mux.Handle("GET /.well-known/did.json", pre(DidHandler()))
-	mux.Handle("POST /signature/create", pre(SigCreateHandler()))
+	mux.Handle("GET /.well-known/did.json", pre(DidHandler(keystore)))
+	mux.Handle("POST /signature/create", pre(SigCreateHandler(keystore)))
 	mux.Handle("POST /signature/verify", pre(sigVerifyHandler()))
-	mux.Handle("POST /receipt/create", pre(receiptCreateHandler()))
-	mux.Handle("POST /receipt/verify", pre(receiptVerifyHandler()))
+	mux.Handle("POST /receipt/create", pre(receiptCreateHandler(keystore)))
+	mux.Handle("POST /receipt/verify", pre(receiptVerifyHandler(keystore)))
 	mux.Handle("GET /", pre(IndexHandler()))
 	mux.Handle("GET /index.html", pre(IndexHandler()))
 	mux.Handle("GET /favicon.ico", pre(FaviconHandler()))
@@ -143,7 +143,7 @@ func IndexHandler() http.HandlerFunc {
 		w.Header().Add("Content-Type", "text/html")
 
 		tmpl.ExecuteTemplate(w, "index.tmpl", map[string]interface{}{
-			"defaultHeaders": signer.PrintHeaders(signer.DefaultHeaders(getHostPort())),
+			"defaultHeaders": signer.PrintHeaders(signer.DefaultHeaders(getHostPort(), "keyid")),
 		})
 	}
 }
@@ -172,9 +172,9 @@ func FaviconHandler() http.HandlerFunc {
 }
 
 // DidHandler returns a DID document for the current server
-func DidHandler() http.HandlerFunc {
+func DidHandler(keystore *keys.KeyStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		didDoc, err := keys.CreateDoc(getHostPort(), keys.GetKeyDefault().Public())
+		didDoc, err := keys.CreateDoc(getHostPort(), keystore.GetPubKey())
 		if err != nil {
 			sendError(w, "failed to create did doc", err)
 			return
@@ -185,7 +185,7 @@ func DidHandler() http.HandlerFunc {
 }
 
 // SigCreateHandler creates a signature for a payload provided in the request
-func SigCreateHandler() http.HandlerFunc {
+func SigCreateHandler(keystore *keys.KeyStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		payloadB, err := readBytesFromForm(r, "payloadfile", "payloadhex", "payload", false)
 		if err != nil {
@@ -211,7 +211,7 @@ func SigCreateHandler() http.HandlerFunc {
 		payloadHash := sha256.Sum256(payloadB)
 		payloadHashHex := hex.EncodeToString(payloadHash[:])
 
-		signature, err := signer.CreateSignature(payloadB, kv, getHostPort())
+		signature, err := signer.CreateSignature(payloadB, kv, getHostPort(), keystore)
 		if err != nil {
 			sendError(w, "failed to create signature", err)
 			return
@@ -248,7 +248,7 @@ func sigVerifyHandler() http.HandlerFunc {
 }
 
 // receiptCreateHandler creates a receipt for a signature provided in the request
-func receiptCreateHandler() http.HandlerFunc {
+func receiptCreateHandler(keystore *keys.KeyStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		STANDALONE := "standalone"
 
@@ -275,7 +275,7 @@ func receiptCreateHandler() http.HandlerFunc {
 			sendError(w, "failed to unmarshal signature bytes", err)
 			return
 		}
-		receipt, err := countersigner.Countersign(msg, getHostPort(), receiptType != STANDALONE)
+		receipt, err := countersigner.Countersign(msg, keystore, getHostPort(), receiptType != STANDALONE)
 		if err != nil {
 			sendError(w, "failed to countersign", err)
 			return
@@ -297,7 +297,7 @@ func receiptCreateHandler() http.HandlerFunc {
 }
 
 // receiptVerifyHandler verifies a receipt and a signature provided in the request
-func receiptVerifyHandler() http.HandlerFunc {
+func receiptVerifyHandler(keystore *keys.KeyStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		signatureB, err := readBytesFromForm(r, "signaturefile", "signaturehex", "", false)
 		if err != nil {
@@ -333,7 +333,7 @@ func receiptVerifyHandler() http.HandlerFunc {
 			return
 		}
 
-		err = countersigner.Verify(receipt, signature)
+		err = countersigner.Verify(receipt, signature, keystore)
 		if err != nil {
 			sendError(w, "failed to verify receipt", err)
 			return

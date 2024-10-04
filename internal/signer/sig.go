@@ -44,12 +44,12 @@ func PrintHeaders(headers map[any]any) string {
 	return strings.Join(returnValue, ", ")
 }
 
-func DefaultHeaders(hostport string) cose.ProtectedHeader {
+func DefaultHeaders(hostport string, pubKeyId string) cose.ProtectedHeader {
 	hostport = strings.ReplaceAll(hostport, ":", "%3A")
 	return cose.ProtectedHeader{
 		cose.HeaderLabelAlgorithm:   cose.AlgorithmES256,
 		cose.HeaderLabelContentType: DEFAULT_CONTENT_TYPE,
-		cose.HeaderLabelKeyID:       []byte("#" + keys.GetPublicKeyIdDefault()),
+		cose.HeaderLabelKeyID:       []byte("#" + pubKeyId),
 		ISSUER_HEADER_KEY:           "did:web:" + hostport,
 		ISSUER_HEADER_FEED:          "demo",
 		ISSUER_HEADER_REG_INFO: map[any]any{
@@ -173,13 +173,13 @@ func AddHeaders(source cose.ProtectedHeader, customHeaders map[string]string) er
 	return nil
 }
 
-func CreateSignature(payload []byte, customHeaders map[string]string, hostport string) ([]byte, error) {
-	signer, err := keys.GetCoseSignerDefault()
+func CreateSignature(payload []byte, customHeaders map[string]string, hostport string, keystore *keys.KeyStore) ([]byte, error) {
+	signer, err := keystore.GetCoseSignerDefault()
 	if err != nil {
 		return nil, err
 	}
 	// create message header
-	protected := DefaultHeaders(hostport)
+	protected := DefaultHeaders(hostport, keystore.GetPublicKeyIdDefault())
 	AddHeaders(protected, customHeaders)
 	headers := cose.Headers{
 		Protected: protected,
@@ -218,7 +218,7 @@ func VerifySignature(signature []byte, didHttpClient *http.Client) error {
 		return fmt.Errorf("failed to resolve public key: %w", err)
 	}
 
-	verifier, err := keys.GetCoseVerifierFor(alg, pubKey)
+	verifier, err := cose.NewVerifier(alg, pubKey)
 	if err != nil {
 		return fmt.Errorf("failed to create signature verifier: %w", err)
 	}

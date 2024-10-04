@@ -19,12 +19,6 @@ import (
 
 const SHARED_DIR = "/var/tmp/fn/playground-cose-eastus-dir"
 
-var keyFile string = SHARED_DIR + "/generated.ecdsa.key"
-var caFile string = SHARED_DIR + "/ca.der"
-
-var privateKey *ecdsa.PrivateKey
-var rootCert *x509.Certificate
-
 var caTemplate x509.Certificate = x509.Certificate{
 	SerialNumber:          big.NewInt(1),
 	Subject:               pkix.Name{CommonName: "CosePlayground"},
@@ -44,17 +38,25 @@ var caTemplate x509.Certificate = x509.Certificate{
 // 	ExtKeyUsage:  []x509.ExtKeyUsage{x509.ExtKeyUsageCodeSigning, x509.ExtKeyUsageMicrosoftCommercialCodeSigning, x509.ExtKeyUsageMicrosoftKernelCodeSigning},
 // }
 
-func init() {
+func NewKeyStore() (*KeyStore, error) {
+	return NewKeyStoreIn(SHARED_DIR)
+}
+
+func NewKeyStoreIn(dir string) (*KeyStore, error) {
 	var err error
 	var keyBytes []byte
 	var certDer []byte
+	var privateKey *ecdsa.PrivateKey
+	var rootCert *x509.Certificate
 	var recreateCa bool = true
+	var keyFile string = dir + "/generated.ecdsa.key"
+	var caFile string = dir + "/ca.der"
 
-	// create shared directory if it doesn't exist
-	if _, err = os.Stat(SHARED_DIR); os.IsNotExist(err) {
-		err = os.MkdirAll(SHARED_DIR, 0700)
+	// create directory if it doesn't exist
+	if _, err = os.Stat(dir); os.IsNotExist(err) {
+		err = os.MkdirAll(dir, 0700)
 		if err != nil {
-			panic(err)
+			return nil, err
 		}
 	}
 
@@ -87,62 +89,69 @@ func init() {
 		recreateCa = true
 		privateKey, err = ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 		if err != nil {
-			panic(err)
+			return nil, err
 		}
 		keyBytes, err = x509.MarshalECPrivateKey(privateKey)
 		if err != nil {
-			panic(err)
+			return nil, err
 		}
 		log.Printf("Writing key file to %s", keyFile)
 		err = os.WriteFile(keyFile, keyBytes, 0600)
 		if err != nil {
-			panic(err)
+			return nil, err
 		}
 	}
 
 	if recreateCa || len(certDer) == 0 {
 		certDer, err = x509.CreateCertificate(rand.Reader, &caTemplate, &caTemplate, &privateKey.PublicKey, privateKey)
 		if err != nil {
-			panic(err)
+			return nil, err
 		}
 		log.Printf("Writing CA file to %s", caFile)
 		err = os.WriteFile(caFile, certDer, 0600)
 		if err != nil {
-			panic(err)
+			return nil, err
 		}
 	}
 
 	rootCert, err = x509.ParseCertificate(certDer)
 	if err != nil {
-		panic(err)
+		return nil, err
 	}
+
+	return &KeyStore{
+		privateKey: privateKey,
+		rootCert:   rootCert,
+	}, nil
 }
 
-func GetKeyDefault() *ecdsa.PrivateKey {
-	return privateKey
+type KeyStore struct {
+	privateKey *ecdsa.PrivateKey
+	rootCert   *x509.Certificate
 }
 
-func GetPublicKeyIdDefault() string {
-	derCert, err := x509.MarshalPKIXPublicKey(GetKeyDefault().Public())
+// used to get public key
+func (s *KeyStore) GetPubKey() crypto.PublicKey {
+	return s.privateKey.Public()
+}
+
+func (s *KeyStore) GetPublicKeyIdDefault() string {
+	return PubKeyCertHash(s.GetPubKey())
+}
+
+func (s *KeyStore) GetCoseSignerDefault() (cose.Signer, error) {
+	return cose.NewSigner(cose.AlgorithmES256, s.privateKey)
+}
+
+func (s *KeyStore) GetCoseVerifierDefault() (cose.Verifier, error) {
+	return cose.NewVerifier(cose.AlgorithmES256, s.privateKey.Public())
+}
+
+func PubKeyCertHash(k crypto.PublicKey) string {
+	derCert, err := x509.MarshalPKIXPublicKey(k)
 	if err != nil {
 		panic(err)
 	}
 	certHash := sha256.Sum256(derCert)
 	return hex.EncodeToString(certHash[:])
-}
-
-func GetCoseSignerDefault() (cose.Signer, error) {
-	return GetCoseSignerFor(cose.AlgorithmES256, GetKeyDefault())
-}
-
-func GetCoseSignerFor(alg cose.Algorithm, key crypto.Signer) (cose.Signer, error) {
-	return cose.NewSigner(alg, key)
-}
-
-func GetCoseVerifierDefault() (cose.Verifier, error) {
-	return GetCoseVerifierFor(cose.AlgorithmES256, GetKeyDefault().Public())
-}
-
-func GetCoseVerifierFor(alg cose.Algorithm, pubKey crypto.PublicKey) (cose.Verifier, error) {
-	return cose.NewVerifier(alg, pubKey)
 }
