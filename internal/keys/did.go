@@ -12,7 +12,7 @@ import (
 	"github.com/lestrrat-go/jwx/jwk"
 )
 
-func CreateDoc(hostport string, publicKey crypto.PublicKey) (string, error) {
+func CreateDoc(hostport string, publicKey crypto.PublicKey, b64certChain []string) (string, error) {
 
 	hostport = strings.ReplaceAll(hostport, ":", "%3A")
 	pubKeyId := PubKeyCertHash(publicKey)
@@ -26,6 +26,7 @@ func CreateDoc(hostport string, publicKey crypto.PublicKey) (string, error) {
 	}
 
 	key.Set(jwk.KeyIDKey, pubKeyId)
+	key.Set(jwk.X509CertChainKey, b64certChain)
 	buf, err := json.MarshalIndent(key, "", "  ")
 	if err != nil {
 		return "", fmt.Errorf("failed to marshal key into JSON: %w", err)

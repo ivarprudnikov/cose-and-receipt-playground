@@ -35,7 +35,7 @@ func Test_GetCountersignHeaders(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			hdr := countersigner.GetCountersignHeaders(tc.hostport, "foobar")
+			hdr := countersigner.GetCountersignHeaders(tc.hostport, "foobar", [][]byte{[]byte("cert1"), []byte("cert2")})
 			require.Equal(t, tc.expectedIssuer, hdr.Protected[signer.ISSUER_HEADER_KEY])
 		})
 	}

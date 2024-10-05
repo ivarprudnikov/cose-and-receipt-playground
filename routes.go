@@ -143,7 +143,7 @@ func IndexHandler() http.HandlerFunc {
 		w.Header().Add("Content-Type", "text/html")
 
 		tmpl.ExecuteTemplate(w, "index.tmpl", map[string]interface{}{
-			"defaultHeaders": signer.PrintHeaders(signer.DefaultHeaders(getHostPort(), "keyid")),
+			"defaultHeaders": signer.PrintHeaders(signer.DefaultHeaders(getHostPort(), "keyid", [][]byte{[]byte("")})),
 		})
 	}
 }
@@ -174,7 +174,7 @@ func FaviconHandler() http.HandlerFunc {
 // DidHandler returns a DID document for the current server
 func DidHandler(keystore *keys.KeyStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		didDoc, err := keys.CreateDoc(getHostPort(), keystore.GetPubKey())
+		didDoc, err := keys.CreateDoc(getHostPort(), keystore.GetPubKey(), keystore.GetB64CertChain())
 		if err != nil {
 			sendError(w, "failed to create did doc", err)
 			return

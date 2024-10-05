@@ -79,7 +79,7 @@ func Test_Did_ResolvePublicKey(t *testing.T) {
 	require.NoError(t, err)
 
 	tlsServer := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		didDoc, err := keys.CreateDoc(strings.ReplaceAll(r.Host, ":", "%3A"), privateKey.Public())
+		didDoc, err := keys.CreateDoc(strings.ReplaceAll(r.Host, ":", "%3A"), privateKey.Public(), []string{})
 		require.NoError(t, err)
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(didDoc))

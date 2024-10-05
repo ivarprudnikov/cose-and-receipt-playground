@@ -31,11 +31,12 @@ func init() {
 	}
 }
 
-func GetCountersignHeaders(hostport string, pubKeyId string) cose.Headers {
+func GetCountersignHeaders(hostport string, pubKeyId string, x5chain [][]byte) cose.Headers {
 	return cose.Headers{
 		Protected: cose.ProtectedHeader{
 			cose.HeaderLabelAlgorithm: cose.AlgorithmES256,
 			cose.HeaderLabelKeyID:     []byte("#" + pubKeyId),
+			cose.HeaderLabelX5Chain:   x5chain,
 			signer.ISSUER_HEADER_KEY:  "did:web:" + strings.ReplaceAll(hostport, ":", "%3A"),
 		},
 	}
@@ -48,7 +49,7 @@ func Countersign(target cose.Sign1Message, keystore *keys.KeyStore, hostport str
 		return nil, err
 	}
 	cs := cose.Sign1Message{
-		Headers: GetCountersignHeaders(hostport, keystore.GetPublicKeyId()),
+		Headers: GetCountersignHeaders(hostport, keystore.GetPublicKeyId(), keystore.GetCertChain()),
 		Payload: []byte{},
 	}
 	tbsCbor, err := ToBeSigned(target, cs.Headers)

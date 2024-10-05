@@ -147,10 +147,11 @@ func Test_AddHeaders(t *testing.T) {
 }
 
 func Test_DefaultHeaders(t *testing.T) {
-	headers := signer.DefaultHeaders("foo.bar.com:8080", "foobar")
+	headers := signer.DefaultHeaders("foo.bar.com:8080", "foobar", [][]byte{[]byte("chain")})
 	require.NotNil(t, headers)
 	require.Equal(t, headers[cose.HeaderLabelAlgorithm], interface{}(cose.AlgorithmES256))
 	require.Equal(t, headers[cose.HeaderLabelContentType], interface{}("text/plain"))
+	require.Equal(t, headers[cose.HeaderLabelX5Chain], interface{}([][]byte{[]byte("chain")}))
 	kid, ok := headers[cose.HeaderLabelKeyID].([]byte)
 	require.True(t, ok)
 	require.Equal(t, kid, []byte("#foobar"))
@@ -165,11 +166,12 @@ func Test_DefaultHeaders(t *testing.T) {
 }
 
 func Test_PrintHeaders(t *testing.T) {
-	headers := signer.DefaultHeaders("foo.bar.com:8080", "foobar")
+	headers := signer.DefaultHeaders("foo.bar.com:8080", "foobar", [][]byte{[]byte("chain")})
 	printed := signer.PrintHeaders(headers)
 	require.Contains(t, printed, "1: ES256,")
 	require.Contains(t, printed, "3: text/plain,")
 	require.Contains(t, printed, "4: #foobar")
+	require.Contains(t, printed, "33: [[99 104 97 105 110]]")
 	require.Contains(t, printed, "391: did:web:foo.bar.com%3A8080,")
 	require.Contains(t, printed, "392: demo,")
 	require.Contains(t, printed, "issuance_ts: ")
@@ -229,7 +231,7 @@ func Test_Create_Verify_with_did(t *testing.T) {
 	require.NoError(t, err)
 
 	tlsServer := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		didDoc, err := keys.CreateDoc(strings.ReplaceAll(r.Host, ":", "%3A"), tmpKeystore.GetPubKey())
+		didDoc, err := keys.CreateDoc(strings.ReplaceAll(r.Host, ":", "%3A"), tmpKeystore.GetPubKey(), tmpKeystore.GetB64CertChain())
 		require.NoError(t, err)
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(didDoc))

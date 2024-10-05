@@ -44,12 +44,13 @@ func PrintHeaders(headers map[any]any) string {
 	return strings.Join(returnValue, ", ")
 }
 
-func DefaultHeaders(hostport string, pubKeyId string) cose.ProtectedHeader {
+func DefaultHeaders(hostport string, pubKeyId string, x5chain [][]byte) cose.ProtectedHeader {
 	hostport = strings.ReplaceAll(hostport, ":", "%3A")
 	return cose.ProtectedHeader{
 		cose.HeaderLabelAlgorithm:   cose.AlgorithmES256,
 		cose.HeaderLabelContentType: DEFAULT_CONTENT_TYPE,
 		cose.HeaderLabelKeyID:       []byte("#" + pubKeyId),
+		cose.HeaderLabelX5Chain:     x5chain,
 		ISSUER_HEADER_KEY:           "did:web:" + hostport,
 		ISSUER_HEADER_FEED:          "demo",
 		ISSUER_HEADER_REG_INFO: map[any]any{
@@ -179,7 +180,7 @@ func CreateSignature(payload []byte, customHeaders map[string]string, hostport s
 		return nil, err
 	}
 	// create message header
-	protected := DefaultHeaders(hostport, keystore.GetPublicKeyId())
+	protected := DefaultHeaders(hostport, keystore.GetPublicKeyId(), keystore.GetCertChain())
 	AddHeaders(protected, customHeaders)
 	headers := cose.Headers{
 		Protected: protected,

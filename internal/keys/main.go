@@ -8,6 +8,7 @@ import (
 	"crypto/sha256"
 	"crypto/x509"
 	"crypto/x509/pkix"
+	"encoding/base64"
 	"encoding/hex"
 	"log"
 	"math/big"
@@ -46,7 +47,7 @@ func NewKeyStoreIn(dir string) (*KeyStore, error) {
 	var err error
 	var keyBytes []byte
 	var certDer []byte
-	var privateKey *ecdsa.PrivateKey
+	var rootKey *ecdsa.PrivateKey
 	var rootCert *x509.Certificate
 	var recreateCa bool = true
 	var keyFile string = dir + "/generated.ecdsa.key"
@@ -65,7 +66,7 @@ func NewKeyStoreIn(dir string) (*KeyStore, error) {
 	if _, err = os.Stat(keyFile); err == nil {
 		keyBytes, err = os.ReadFile(keyFile)
 		if err == nil {
-			privateKey, err = x509.ParseECPrivateKey(keyBytes)
+			rootKey, err = x509.ParseECPrivateKey(keyBytes)
 			if err != nil {
 				log.Printf("Failed to parse private key: %s", err.Error())
 			}
@@ -85,13 +86,13 @@ func NewKeyStoreIn(dir string) (*KeyStore, error) {
 	}
 
 	// create new private key if it doesn't exist
-	if privateKey == nil {
+	if rootKey == nil {
 		recreateCa = true
-		privateKey, err = ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+		rootKey, err = ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 		if err != nil {
 			return nil, err
 		}
-		keyBytes, err = x509.MarshalECPrivateKey(privateKey)
+		keyBytes, err = x509.MarshalECPrivateKey(rootKey)
 		if err != nil {
 			return nil, err
 		}
@@ -103,7 +104,7 @@ func NewKeyStoreIn(dir string) (*KeyStore, error) {
 	}
 
 	if recreateCa || len(certDer) == 0 {
-		certDer, err = x509.CreateCertificate(rand.Reader, &caTemplate, &caTemplate, &privateKey.PublicKey, privateKey)
+		certDer, err = x509.CreateCertificate(rand.Reader, &caTemplate, &caTemplate, &rootKey.PublicKey, rootKey)
 		if err != nil {
 			return nil, err
 		}
@@ -120,19 +121,29 @@ func NewKeyStoreIn(dir string) (*KeyStore, error) {
 	}
 
 	return &KeyStore{
-		privateKey: privateKey,
-		rootCert:   rootCert,
+		rootKey:  rootKey,
+		rootCert: rootCert,
 	}, nil
 }
 
 type KeyStore struct {
-	privateKey *ecdsa.PrivateKey
-	rootCert   *x509.Certificate
+	rootKey  *ecdsa.PrivateKey
+	rootCert *x509.Certificate
+}
+
+// GetB64CertChain returns the cert chain as to be used in a JWK
+// The chain is from left to right, with the root cert last
+func (s *KeyStore) GetB64CertChain() []string {
+	return []string{base64.StdEncoding.EncodeToString(s.rootCert.Raw)}
+}
+
+func (s *KeyStore) GetCertChain() [][]byte {
+	return [][]byte{s.rootCert.Raw}
 }
 
 // used to get public key
 func (s *KeyStore) GetPubKey() crypto.PublicKey {
-	return s.privateKey.Public()
+	return s.rootKey.Public()
 }
 
 func (s *KeyStore) GetPublicKeyId() string {
@@ -140,7 +151,7 @@ func (s *KeyStore) GetPublicKeyId() string {
 }
 
 func (s *KeyStore) GetCoseSigner() (cose.Signer, error) {
-	return cose.NewSigner(cose.AlgorithmES256, s.privateKey)
+	return cose.NewSigner(cose.AlgorithmES256, s.rootKey)
 }
 
 func (s *KeyStore) GetCoseVerifier() (cose.Verifier, error) {
