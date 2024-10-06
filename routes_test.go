@@ -125,9 +125,9 @@ func TestSignatureCreate(t *testing.T) {
 		},
 		{
 			name:           "adds custom headers",
-			formValues:     map[string][]string{"payload": {"hello"}, "headerkey": {"33[0]", "33[1]", "33[2]"}, "headerval": {"a", "b", "c", "d", "e"}},
+			formValues:     map[string][]string{"payload": {"hello"}, "headerkey": {"77777[0]", "77777[1]", "77777[2]"}, "headerval": {"a", "b", "c", "d", "e"}},
 			status:         http.StatusOK,
-			coseHeaderKeys: []any{int64(33)},
+			coseHeaderKeys: []any{int64(77777)},
 			coseHeaderVals: []any{[]any{"a", "b", "c"}},
 		},
 	}
