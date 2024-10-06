@@ -5,11 +5,17 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+
+	"github.com/ivarprudnikov/cose-and-receipt-playground/internal/keys"
 )
 
 func NewHttpHandler() http.Handler {
 	mux := http.NewServeMux()
-	AddRoutes(mux)
+	keystore, err := keys.NewKeyStore()
+	if err != nil {
+		log.Fatalf("Failed to create keystore: %v", err)
+	}
+	AddRoutes(mux, keystore)
 	return mux
 }
 
