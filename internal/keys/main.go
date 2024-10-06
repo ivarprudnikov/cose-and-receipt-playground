@@ -13,12 +13,15 @@ import (
 	"log"
 	"math/big"
 	"os"
+	"path"
 	"time"
 
 	"github.com/veraison/go-cose"
 )
 
 const SHARED_DIR = "/var/tmp/fn/playground-cose-eastus-dir"
+const ROOT_KEY_FILE = "generated.ecdsa.key"
+const ROOT_CERT_FILE = "ca.der"
 
 var caTemplate x509.Certificate = x509.Certificate{
 	SerialNumber:          big.NewInt(1),
@@ -45,85 +48,117 @@ func NewKeyStore() (*KeyStore, error) {
 
 func NewKeyStoreIn(dir string) (*KeyStore, error) {
 	var err error
-	var keyBytes []byte
 	var certDer []byte
 	var rootKey *ecdsa.PrivateKey
 	var rootCert *x509.Certificate
 	var recreateCa bool = true
-	var keyFile string = dir + "/generated.ecdsa.key"
-	var caFile string = dir + "/ca.der"
 
-	// create directory if it doesn't exist
-	if _, err = os.Stat(dir); os.IsNotExist(err) {
-		err = os.MkdirAll(dir, 0700)
-		if err != nil {
-			return nil, err
-		}
+	var keyFile string = path.Join(dir, ROOT_KEY_FILE)
+	var caFile string = path.Join(dir, ROOT_CERT_FILE)
+
+	err = createDirIfNotExists(dir)
+	if err != nil {
+		return nil, err
 	}
 
 	// Load private key from file if it exists
 	log.Printf("Reading key from file %s", keyFile)
-	if _, err = os.Stat(keyFile); err == nil {
-		keyBytes, err = os.ReadFile(keyFile)
-		if err == nil {
-			rootKey, err = x509.ParseECPrivateKey(keyBytes)
-			if err != nil {
-				log.Printf("Failed to parse private key: %s", err.Error())
-			}
-		} else {
-			log.Printf("Failed to read private key file: %s", err.Error())
+	rootKey, err = readECKey(keyFile)
+	if err != nil {
+		recreateCa = true
+		log.Printf("Failed to read private key file: %s", err.Error())
+		rootKey, err = newECKey(keyFile)
+		if err != nil {
+			log.Printf("Failed to create private key file: %s", err.Error())
+			return nil, err
 		}
 	}
 
-	log.Printf("Reading CA from file %s", caFile)
-	if _, err = os.Stat(caFile); err == nil {
-		certDer, err = os.ReadFile(caFile)
-		if err == nil {
-			recreateCa = false
-		} else {
+	if !recreateCa {
+		log.Printf("Reading CA from file %s", caFile)
+		rootCert, err = readCert(caFile)
+		if err != nil {
+			recreateCa = true
 			log.Printf("Failed to read CA file: %s", err.Error())
 		}
 	}
 
-	// create new private key if it doesn't exist
-	if rootKey == nil {
-		recreateCa = true
-		rootKey, err = ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
-		if err != nil {
-			return nil, err
-		}
-		keyBytes, err = x509.MarshalECPrivateKey(rootKey)
-		if err != nil {
-			return nil, err
-		}
-		log.Printf("Writing key file to %s", keyFile)
-		err = os.WriteFile(keyFile, keyBytes, 0600)
-		if err != nil {
-			return nil, err
-		}
-	}
-
-	if recreateCa || len(certDer) == 0 {
+	if recreateCa {
 		certDer, err = x509.CreateCertificate(rand.Reader, &caTemplate, &caTemplate, &rootKey.PublicKey, rootKey)
 		if err != nil {
+			log.Printf("Failed to create CA cert %s", err.Error())
 			return nil, err
 		}
 		log.Printf("Writing CA file to %s", caFile)
 		err = os.WriteFile(caFile, certDer, 0600)
 		if err != nil {
+			log.Printf("Failed to write CA file %s", err.Error())
 			return nil, err
 		}
-	}
-
-	rootCert, err = x509.ParseCertificate(certDer)
-	if err != nil {
-		return nil, err
+		rootCert, err = x509.ParseCertificate(certDer)
+		if err != nil {
+			log.Printf("Failed to parse CA cert file %s", err.Error())
+			return nil, err
+		}
 	}
 
 	return &KeyStore{
 		rootKey:  rootKey,
 		rootCert: rootCert,
 	}, nil
+}
+
+func createDirIfNotExists(dir string) error {
+	_, err := os.Stat(dir)
+	if os.IsNotExist(err) {
+		err = os.MkdirAll(dir, 0700)
+		if err != nil {
+			return err
+		}
+	} else if err != nil {
+		return err
+	}
+	return nil
+}
+
+func readECKey(keyFile string) (*ecdsa.PrivateKey, error) {
+	_, err := os.Stat(keyFile)
+	if err != nil {
+		return nil, err
+	}
+	keyBytes, err := os.ReadFile(keyFile)
+	if err != nil {
+		return nil, err
+	}
+	return x509.ParseECPrivateKey(keyBytes)
+}
+
+func newECKey(keyFile string) (*ecdsa.PrivateKey, error) {
+	rootKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		return nil, err
+	}
+	keyBytes, err := x509.MarshalECPrivateKey(rootKey)
+	if err != nil {
+		return nil, err
+	}
+	err = os.WriteFile(keyFile, keyBytes, 0600)
+	if err != nil {
+		return nil, err
+	}
+	return rootKey, nil
+}
+
+func readCert(certFile string) (*x509.Certificate, error) {
+	_, err := os.Stat(certFile)
+	if err != nil {
+		return nil, err
+	}
+	certDer, err := os.ReadFile(certFile)
+	if err != nil {
+		return nil, err
+	}
+	return x509.ParseCertificate(certDer)
 }
 
 type KeyStore struct {
