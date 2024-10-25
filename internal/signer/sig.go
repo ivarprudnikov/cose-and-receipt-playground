@@ -20,8 +20,52 @@ import (
 const ISSUER_HEADER_KEY = int64(391)
 const ISSUER_HEADER_FEED = int64(392)
 const ISSUER_HEADER_REG_INFO = int64(393)
-
+const CWT_CLAIMS_HEADER = int64(15)
+const CWT_CLAIMS_ISSUER_KEY = int64(1)
+const CWT_CLAIMS_SUBJECT_KEY = int64(2)
 const DEFAULT_CONTENT_TYPE = "text/plain"
+
+type IssuerProfile int
+
+const (
+	Unknown IssuerProfile = iota
+	DidWeb
+	DidX509
+)
+
+func (ip IssuerProfile) String() string {
+	if ip == DidWeb {
+		return "did:web"
+	}
+	if ip == DidX509 {
+		return "did:x509"
+	}
+	return "unknown"
+}
+
+type Issuer struct {
+	profile  IssuerProfile
+	hostPort string
+	pubKeyId string
+	x5chain  [][]byte
+}
+
+func NewIssuer(profile IssuerProfile, hostPort string, pubKeyId string, x5chain [][]byte) *Issuer {
+	return &Issuer{profile: profile, hostPort: hostPort, pubKeyId: pubKeyId, x5chain: x5chain}
+}
+
+func (i *Issuer) GetIss() string {
+	hostport := strings.ReplaceAll(i.hostPort, ":", "%3A")
+	return DidWeb.String() + ":" + hostport
+}
+
+func (i *Issuer) GetKid() []byte {
+	return []byte("#" + i.pubKeyId)
+}
+
+func (i *Issuer) GetX5c() [][]byte {
+	return i.x5chain
+}
 
 func PrintHeaders(headers map[any]any) string {
 	returnValue := []string{}
@@ -44,19 +88,22 @@ func PrintHeaders(headers map[any]any) string {
 	return strings.Join(returnValue, ", ")
 }
 
-func DefaultHeaders(hostport string, pubKeyId string, x5chain [][]byte) cose.ProtectedHeader {
-	hostport = strings.ReplaceAll(hostport, ":", "%3A")
+func DefaultHeaders(issuer Issuer) cose.ProtectedHeader {
 	return cose.ProtectedHeader{
 		cose.HeaderLabelAlgorithm:   cose.AlgorithmES256,
 		cose.HeaderLabelContentType: DEFAULT_CONTENT_TYPE,
-		cose.HeaderLabelKeyID:       []byte("#" + pubKeyId),
-		cose.HeaderLabelX5Chain:     x5chain,
-		ISSUER_HEADER_KEY:           "did:web:" + hostport,
+		cose.HeaderLabelKeyID:       issuer.GetKid(),
+		cose.HeaderLabelX5Chain:     issuer.GetX5c(),
+		ISSUER_HEADER_KEY:           issuer.GetIss(),
 		ISSUER_HEADER_FEED:          "demo",
 		ISSUER_HEADER_REG_INFO: map[any]any{
 			"register_by": uint64(time.Now().Add(24 * time.Hour).Unix()),
 			"sequence_no": uint64(1),
 			"issuance_ts": uint64(time.Now().Unix()),
+		},
+		CWT_CLAIMS_HEADER: map[any]any{
+			CWT_CLAIMS_ISSUER_KEY:  issuer.GetIss(),
+			CWT_CLAIMS_SUBJECT_KEY: "demo",
 		},
 	}
 }
@@ -180,7 +227,8 @@ func CreateSignature(payload []byte, customHeaders map[string]string, hostport s
 		return nil, err
 	}
 	// create message header
-	protected := DefaultHeaders(hostport, keystore.GetPublicKeyId(), keystore.GetCertChain())
+	issuer := NewIssuer(DidWeb, hostport, keystore.GetPublicKeyId(), keystore.GetCertChain())
+	protected := DefaultHeaders(*issuer)
 	AddHeaders(protected, customHeaders)
 	headers := cose.Headers{
 		Protected: protected,

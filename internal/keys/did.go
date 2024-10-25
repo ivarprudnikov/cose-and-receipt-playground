@@ -15,7 +15,7 @@ import (
 func CreateDoc(hostport string, publicKey crypto.PublicKey, b64certChain []string) (string, error) {
 
 	hostport = strings.ReplaceAll(hostport, ":", "%3A")
-	pubKeyId := PubKeyCertHash(publicKey)
+	pubKeyId := PubKeyDerHash(publicKey)
 
 	key, err := jwk.New(publicKey)
 	if err != nil {

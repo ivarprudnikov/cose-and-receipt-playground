@@ -124,7 +124,7 @@ func (s *KeyStore) GetPubKey() crypto.PublicKey {
 }
 
 func (s *KeyStore) GetPublicKeyId() string {
-	return PubKeyCertHash(s.GetPubKey())
+	return PubKeyDerHash(s.GetPubKey())
 }
 
 func (s *KeyStore) GetCoseSigner() (cose.Signer, error) {
@@ -135,12 +135,12 @@ func (s *KeyStore) GetCoseVerifier() (cose.Verifier, error) {
 	return cose.NewVerifier(cose.AlgorithmES256, s.GetPubKey())
 }
 
-func PubKeyCertHash(k crypto.PublicKey) string {
-	derCert, err := x509.MarshalPKIXPublicKey(k)
+func PubKeyDerHash(k crypto.PublicKey) string {
+	subjectPublicKeyInfoDer, err := x509.MarshalPKIXPublicKey(k)
 	if err != nil {
 		panic(err)
 	}
-	certHash := sha256.Sum256(derCert)
+	certHash := sha256.Sum256(subjectPublicKeyInfoDer)
 	return hex.EncodeToString(certHash[:])
 }
 

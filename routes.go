@@ -143,7 +143,11 @@ func IndexHandler() http.HandlerFunc {
 		w.Header().Add("Content-Type", "text/html")
 
 		tmpl.ExecuteTemplate(w, "index.tmpl", map[string]interface{}{
-			"defaultHeaders": signer.PrintHeaders(signer.DefaultHeaders(getHostPort(), "keyid", [][]byte{[]byte("")})),
+			"defaultHeaders": signer.PrintHeaders(
+				signer.DefaultHeaders(
+					*signer.NewIssuer(signer.DidWeb, getHostPort(), "keyid", [][]byte{[]byte("")}),
+				),
+			),
 		})
 	}
 }

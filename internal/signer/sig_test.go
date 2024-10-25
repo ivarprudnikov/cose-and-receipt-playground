@@ -147,7 +147,8 @@ func Test_AddHeaders(t *testing.T) {
 }
 
 func Test_DefaultHeaders(t *testing.T) {
-	headers := signer.DefaultHeaders("foo.bar.com:8080", "foobar", [][]byte{[]byte("chain")})
+	issuer := signer.NewIssuer(signer.DidWeb, "foo.bar.com:8080", "foobar", [][]byte{[]byte("chain")})
+	headers := signer.DefaultHeaders(*issuer)
 	require.NotNil(t, headers)
 	require.Equal(t, headers[cose.HeaderLabelAlgorithm], interface{}(cose.AlgorithmES256))
 	require.Equal(t, headers[cose.HeaderLabelContentType], interface{}("text/plain"))
@@ -166,7 +167,8 @@ func Test_DefaultHeaders(t *testing.T) {
 }
 
 func Test_PrintHeaders(t *testing.T) {
-	headers := signer.DefaultHeaders("foo.bar.com:8080", "foobar", [][]byte{[]byte("chain")})
+	issuer := signer.NewIssuer(signer.DidWeb, "foo.bar.com:8080", "foobar", [][]byte{[]byte("chain")})
+	headers := signer.DefaultHeaders(*issuer)
 	printed := signer.PrintHeaders(headers)
 	require.Contains(t, printed, "1: ES256,")
 	require.Contains(t, printed, "3: text/plain,")
