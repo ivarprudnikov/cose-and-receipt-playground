@@ -215,7 +215,9 @@ func SigCreateHandler(keystore *keys.KeyStore) http.HandlerFunc {
 		payloadHash := sha256.Sum256(payloadB)
 		payloadHashHex := hex.EncodeToString(payloadHash[:])
 
-		signature, err := signer.CreateSignature(payloadB, kv, getHostPort(), keystore)
+		// TODO add support for custom issuer profile switch
+		issuer := signer.NewIssuer(signer.DidWeb, getHostPort(), keystore.GetPublicKeyId(), keystore.GetCertChain())
+		signature, err := signer.CreateSignature(issuer, payloadB, kv, keystore)
 		if err != nil {
 			sendError(w, "failed to create signature", err)
 			return
