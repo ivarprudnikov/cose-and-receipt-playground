@@ -146,17 +146,33 @@ func Test_AddHeaders(t *testing.T) {
 	}
 }
 
-func Test_DefaultHeaders(t *testing.T) {
+func Test_DefaultHeaders_DidWeb(t *testing.T) {
 	issuer := signer.NewIssuer(signer.DidWeb, "foo.bar.com:8080", "foobar", [][]byte{[]byte("chain")})
 	headers := signer.DefaultHeaders(*issuer)
 	require.NotNil(t, headers)
 	require.Equal(t, headers[cose.HeaderLabelAlgorithm], interface{}(cose.AlgorithmES256))
 	require.Equal(t, headers[cose.HeaderLabelContentType], interface{}("text/plain"))
-	require.Equal(t, headers[cose.HeaderLabelX5Chain], interface{}([][]byte{[]byte("chain")}))
 	kid, ok := headers[cose.HeaderLabelKeyID].([]byte)
 	require.True(t, ok)
 	require.Equal(t, kid, []byte("#foobar"))
 	require.Equal(t, headers[signer.ISSUER_HEADER_KEY], interface{}("did:web:foo.bar.com%3A8080"))
+	require.Equal(t, headers[signer.ISSUER_HEADER_FEED], interface{}("demo"))
+
+	regInfo, ok := headers[signer.ISSUER_HEADER_REG_INFO].(map[interface{}]interface{})
+	require.True(t, ok)
+	require.Greater(t, regInfo["register_by"].(uint64), uint64(time.Now().Unix()+3600))
+	require.Equal(t, regInfo["sequence_no"], uint64(1))
+	require.LessOrEqual(t, regInfo["issuance_ts"].(uint64), uint64(time.Now().Unix()))
+}
+
+func Test_DefaultHeaders_DidX509(t *testing.T) {
+	issuer := signer.NewIssuer(signer.DidX509, "foo.bar.com:8080", "foobar", [][]byte{[]byte("chain")})
+	headers := signer.DefaultHeaders(*issuer)
+	require.NotNil(t, headers)
+	require.Equal(t, headers[cose.HeaderLabelAlgorithm], interface{}(cose.AlgorithmES256))
+	require.Equal(t, headers[cose.HeaderLabelContentType], interface{}("text/plain"))
+	require.Equal(t, headers[cose.HeaderLabelX5Chain], interface{}([][]byte{[]byte("chain")}))
+	require.Equal(t, headers[signer.ISSUER_HEADER_KEY], interface{}("did:x509:0:sha256:lBSIax6_Al2wZ6TL0ToJA_vZczpTcruhtYvXLBaZt5g::subject:CN:CosePlayground"))
 	require.Equal(t, headers[signer.ISSUER_HEADER_FEED], interface{}("demo"))
 
 	regInfo, ok := headers[signer.ISSUER_HEADER_REG_INFO].(map[interface{}]interface{})
@@ -173,7 +189,6 @@ func Test_PrintHeaders(t *testing.T) {
 	require.Contains(t, printed, "1: ES256,")
 	require.Contains(t, printed, "3: text/plain,")
 	require.Contains(t, printed, "4: #foobar")
-	require.Contains(t, printed, "33: [[99 104 97 105 110]]")
 	require.Contains(t, printed, "391: did:web:foo.bar.com%3A8080,")
 	require.Contains(t, printed, "392: demo,")
 	require.Contains(t, printed, "issuance_ts: ")

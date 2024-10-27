@@ -2,6 +2,7 @@ package signer
 
 import (
 	"crypto/rand"
+	"crypto/sha256"
 	_ "crypto/sha256"
 	"encoding/base64"
 	"fmt"
@@ -55,8 +56,18 @@ func NewIssuer(profile IssuerProfile, hostPort string, pubKeyId string, x5chain 
 }
 
 func (i *Issuer) GetIss() string {
-	hostport := strings.ReplaceAll(i.hostPort, ":", "%3A")
-	return DidWeb.String() + ":" + hostport
+	if i.profile == DidWeb {
+		hostport := strings.ReplaceAll(i.hostPort, ":", "%3A")
+		return DidWeb.String() + ":" + hostport
+	} else if i.profile == DidX509 {
+		// https://github.com/microsoft/did-x509
+		caCertDer := i.x5chain[len(i.x5chain)-1]
+		thumb := sha256.Sum256(caCertDer)
+		thumbBase64Url := base64.RawURLEncoding.EncodeToString(thumb[:])
+		return DidX509.String() + ":0:sha256:" + thumbBase64Url + "::subject:CN:CosePlayground"
+	} else {
+		return "unknown_issuer"
+	}
 }
 
 func (i *Issuer) GetKid() []byte {
@@ -89,12 +100,9 @@ func PrintHeaders(headers map[any]any) string {
 }
 
 func DefaultHeaders(issuer Issuer) cose.ProtectedHeader {
-	return cose.ProtectedHeader{
+	protected := cose.ProtectedHeader{
 		cose.HeaderLabelAlgorithm:   cose.AlgorithmES256,
 		cose.HeaderLabelContentType: DEFAULT_CONTENT_TYPE,
-		cose.HeaderLabelKeyID:       issuer.GetKid(),
-		cose.HeaderLabelX5Chain:     issuer.GetX5c(),
-		ISSUER_HEADER_KEY:           issuer.GetIss(),
 		ISSUER_HEADER_FEED:          "demo",
 		ISSUER_HEADER_REG_INFO: map[any]any{
 			"register_by": uint64(time.Now().Add(24 * time.Hour).Unix()),
@@ -102,10 +110,21 @@ func DefaultHeaders(issuer Issuer) cose.ProtectedHeader {
 			"issuance_ts": uint64(time.Now().Unix()),
 		},
 		CWT_CLAIMS_HEADER: map[any]any{
-			CWT_CLAIMS_ISSUER_KEY:  issuer.GetIss(),
 			CWT_CLAIMS_SUBJECT_KEY: "demo",
 		},
 	}
+
+	if issuer.profile == DidX509 {
+		protected[cose.HeaderLabelX5Chain] = issuer.GetX5c()
+		protected[ISSUER_HEADER_KEY] = issuer.GetIss()
+		protected[CWT_CLAIMS_HEADER].(map[any]any)[CWT_CLAIMS_ISSUER_KEY] = issuer.GetIss()
+	} else if issuer.profile == DidWeb {
+		protected[cose.HeaderLabelKeyID] = issuer.GetKid()
+		protected[ISSUER_HEADER_KEY] = issuer.GetIss()
+		protected[CWT_CLAIMS_HEADER].(map[any]any)[CWT_CLAIMS_ISSUER_KEY] = issuer.GetIss()
+	}
+
+	return protected
 }
 
 func headerKeyFromString(key string) any {
