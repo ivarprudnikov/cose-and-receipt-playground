@@ -1,6 +1,7 @@
 package signer
 
 import (
+	"crypto"
 	"crypto/rand"
 	_ "crypto/sha256"
 	"fmt"
@@ -37,8 +38,9 @@ func VerifySignature(signature []byte, didHttpClient *http.Client) error {
 		return fmt.Errorf("failed to unmarshal signature bytes: %w", err)
 	}
 
-	// transitionary period, get issuer from one of the headers
-	// must be the same in both
+	// Get issuer from one of the headers
+	// 391 is the older SCITT draft
+	// CWT issuer is the newer SCITT draft
 	issuerRaw := msg.Headers.Protected[ISSUER_HEADER_KEY]
 	issuer, ok := issuerRaw.(string)
 	if !ok {
@@ -55,11 +57,15 @@ func VerifySignature(signature []byte, didHttpClient *http.Client) error {
 			return fmt.Errorf("issuer is not a string: %v", issuerRaw)
 		}
 	}
+
 	algRaw := msg.Headers.Protected[cose.HeaderLabelAlgorithm]
 	alg, ok := algRaw.(cose.Algorithm)
 	if !ok {
 		return fmt.Errorf("unexpected alg value: %v", algRaw)
 	}
+
+	var pubKey crypto.PublicKey
+	var err error
 
 	if strings.HasPrefix(issuer, DidWeb.String()) {
 		kidRaw := msg.Headers.Protected[cose.HeaderLabelKeyID]
@@ -69,18 +75,27 @@ func VerifySignature(signature []byte, didHttpClient *http.Client) error {
 		}
 		log.Printf("resolving issuer did: %s, kid %s, alg %v \n", issuer, kid, alg)
 		didResolver := keys.Did{Issuer: issuer, KeyId: string(kid), Client: didHttpClient}
-		pubKey, err := didResolver.ResolvePublicKey()
+		pubKey, err = didResolver.ResolvePublicKey()
 		if err != nil {
 			return fmt.Errorf("failed to resolve public key: %w", err)
 		}
-
-		verifier, err := cose.NewVerifier(alg, pubKey)
-		if err != nil {
-			return fmt.Errorf("failed to create signature verifier: %w", err)
+	} else if strings.HasPrefix(issuer, DidX509.String()) {
+		x5cRaw := msg.Headers.Protected[cose.HeaderLabelX5Chain]
+		x5c, ok := x5cRaw.([][]byte)
+		if !ok {
+			return fmt.Errorf("x5c is not a byte array: %v", x5cRaw)
 		}
-
-		return msg.Verify(nil, verifier)
+		pubKey, err = ResolveDidX509(issuer, x5c)
+		if err != nil {
+			return fmt.Errorf("failed to validate issuer %s: %w", issuer, err)
+		}
+	} else {
+		return fmt.Errorf("unsupported issuer: %s", issuer)
 	}
 
-	return fmt.Errorf("unsupported issuer: %s", issuer)
+	verifier, err := cose.NewVerifier(alg, pubKey)
+	if err != nil {
+		return fmt.Errorf("failed to create signature verifier: %w", err)
+	}
+	return msg.Verify(nil, verifier)
 }

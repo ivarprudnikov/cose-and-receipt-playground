@@ -22,3 +22,62 @@ func Test_NewIssuer_DidX509(t *testing.T) {
 	require.Equal(t, []byte("#foobar"), issuer.GetKid())
 	require.Equal(t, [][]byte{[]byte("chain")}, issuer.GetX5c())
 }
+
+func Test_ResolveDidX509(t *testing.T) {
+	type test struct {
+		did         string
+		x5chain     [][]byte
+		errContains string
+	}
+
+	tests := []test{
+		{
+			did:         "foo",
+			errContains: "invalid did prefix",
+		},
+		{
+			did:         "did:x509:99:sha256",
+			errContains: "invalid did prefix",
+		},
+		{
+			did:         "did:x509:0:",
+			errContains: "invalid CA fingerprint format",
+		},
+		{
+			did:         "did:x509:0:sha1024:foobar",
+			errContains: "unsupported fingerprint algorithm",
+		},
+		{
+			did:         "did:x509:0:sha256:61e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+			x5chain:     [][]byte{[]byte("nomatch")},
+			errContains: "must be more than one certificate",
+		},
+		{
+			did:         "did:x509:0:sha256:61e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+			x5chain:     [][]byte{[]byte("nomatch"), []byte("nomatch")},
+			errContains: "invalid CA fingerprint",
+		},
+		{
+			did:         "did:x509:0:sha256:61e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855::foobar",
+			x5chain:     [][]byte{[]byte("nomatch"), []byte("a")},
+			errContains: "failed to parse CA certificate",
+		},
+		{
+			did:         "did:x509:0:sha256:61e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855::foobar:foobar",
+			x5chain:     [][]byte{[]byte("nomatch"), []byte("a")},
+			errContains: "failed to parse CA certificate",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run("test did: "+tt.did, func(t *testing.T) {
+			_, err := signer.ResolveDidX509(tt.did, tt.x5chain)
+			if tt.errContains != "" {
+				require.Error(t, err)
+				require.Contains(t, err.Error(), tt.errContains)
+				return
+			}
+			require.NoError(t, err)
+		})
+	}
+}
