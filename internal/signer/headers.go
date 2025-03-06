@@ -11,8 +11,7 @@ import (
 	"github.com/veraison/go-cose"
 )
 
-// https://datatracker.ietf.org/doc/draft-ietf-scitt-architecture/
-const ISSUER_HEADER_KEY = int64(391)
+// https://www.ietf.org/archive/id/draft-ietf-scitt-architecture-11.html
 const ISSUER_HEADER_FEED = int64(392)
 const ISSUER_HEADER_REG_INFO = int64(393)
 const CWT_CLAIMS_HEADER = int64(15)
@@ -38,11 +37,9 @@ func DefaultHeaders(issuer Issuer) cose.ProtectedHeader {
 
 	if issuer.profile == DidX509 {
 		protected[cose.HeaderLabelX5Chain] = issuer.GetX5c()
-		protected[ISSUER_HEADER_KEY] = issuer.GetIss()
 		protected[CWT_CLAIMS_HEADER].(map[any]any)[CWT_CLAIMS_ISSUER_KEY] = issuer.GetIss()
 	} else if issuer.profile == DidWeb {
 		protected[cose.HeaderLabelKeyID] = issuer.GetKid()
-		protected[ISSUER_HEADER_KEY] = issuer.GetIss()
 		protected[CWT_CLAIMS_HEADER].(map[any]any)[CWT_CLAIMS_ISSUER_KEY] = issuer.GetIss()
 	}
 

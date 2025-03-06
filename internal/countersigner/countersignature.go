@@ -37,7 +37,9 @@ func GetCountersignHeaders(hostport string, pubKeyId string, x5chain [][]byte) c
 			cose.HeaderLabelAlgorithm: cose.AlgorithmES256,
 			cose.HeaderLabelKeyID:     []byte("#" + pubKeyId),
 			cose.HeaderLabelX5Chain:   x5chain,
-			signer.ISSUER_HEADER_KEY:  "did:web:" + strings.ReplaceAll(hostport, ":", "%3A"),
+			signer.CWT_CLAIMS_HEADER: map[any]any{
+				signer.CWT_CLAIMS_ISSUER_KEY: "did:web:" + strings.ReplaceAll(hostport, ":", "%3A"),
+			},
 		},
 	}
 }

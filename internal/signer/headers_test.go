@@ -151,7 +151,11 @@ func Test_DefaultHeaders_DidWeb(t *testing.T) {
 	kid, ok := headers[cose.HeaderLabelKeyID].([]byte)
 	require.True(t, ok)
 	require.Equal(t, kid, []byte("#foobar"))
-	require.Equal(t, headers[signer.ISSUER_HEADER_KEY], interface{}("did:web:foo.bar.com%3A8080"))
+
+	cwt, ok := headers[signer.CWT_CLAIMS_HEADER].(map[interface{}]interface{})
+	require.True(t, ok)
+	require.Equal(t, cwt[signer.CWT_CLAIMS_ISSUER_KEY], interface{}("did:web:foo.bar.com%3A8080"))
+
 	require.Equal(t, headers[signer.ISSUER_HEADER_FEED], interface{}("demo"))
 
 	regInfo, ok := headers[signer.ISSUER_HEADER_REG_INFO].(map[interface{}]interface{})
@@ -168,7 +172,11 @@ func Test_DefaultHeaders_DidX509(t *testing.T) {
 	require.Equal(t, headers[cose.HeaderLabelAlgorithm], interface{}(cose.AlgorithmES256))
 	require.Equal(t, headers[cose.HeaderLabelContentType], interface{}("text/plain"))
 	require.Equal(t, headers[cose.HeaderLabelX5Chain], interface{}([][]byte{[]byte("chain")}))
-	require.Equal(t, headers[signer.ISSUER_HEADER_KEY], interface{}("did:x509:0:sha256:lBSIax6_Al2wZ6TL0ToJA_vZczpTcruhtYvXLBaZt5g::subject:CN:CosePlayground"))
+
+	cwt, ok := headers[signer.CWT_CLAIMS_HEADER].(map[interface{}]interface{})
+	require.True(t, ok)
+	require.Equal(t, cwt[signer.CWT_CLAIMS_ISSUER_KEY], interface{}("did:x509:0:sha256:lBSIax6_Al2wZ6TL0ToJA_vZczpTcruhtYvXLBaZt5g::subject:CN:CosePlayground"))
+
 	require.Equal(t, headers[signer.ISSUER_HEADER_FEED], interface{}("demo"))
 
 	regInfo, ok := headers[signer.ISSUER_HEADER_REG_INFO].(map[interface{}]interface{})
@@ -185,8 +193,7 @@ func Test_PrintHeaders(t *testing.T) {
 	require.Contains(t, printed, "1: ES256,")
 	require.Contains(t, printed, "3: text/plain,")
 	require.Contains(t, printed, "4: #foobar")
-	require.Contains(t, printed, "391: did:web:foo.bar.com%3A8080,")
-	require.Contains(t, printed, "392: demo,")
+	require.Contains(t, printed, "15: [ 1: did:web:foo.bar.com%3A8080, 2: demo ]")
 	require.Contains(t, printed, "issuance_ts: ")
 	require.Contains(t, printed, "register_by: ")
 	require.Contains(t, printed, "sequence_no: 1")

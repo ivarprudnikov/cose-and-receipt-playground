@@ -36,7 +36,9 @@ func Test_GetCountersignHeaders(t *testing.T) {
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			hdr := countersigner.GetCountersignHeaders(tc.hostport, "foobar", [][]byte{[]byte("cert1"), []byte("cert2")})
-			require.Equal(t, tc.expectedIssuer, hdr.Protected[signer.ISSUER_HEADER_KEY])
+			cwt, ok := hdr.Protected[signer.CWT_CLAIMS_HEADER].(map[interface{}]interface{})
+			require.True(t, ok)
+			require.Equal(t, tc.expectedIssuer, cwt[signer.CWT_CLAIMS_ISSUER_KEY])
 		})
 	}
 }
@@ -57,7 +59,11 @@ func Test_Countersign(t *testing.T) {
 	require.NotEmpty(t, receipt.Headers.Protected)
 	require.Equal(t, cose.AlgorithmES256, receipt.Headers.Protected[cose.HeaderLabelAlgorithm])
 	require.Equal(t, []byte("#"+tmpKeystore.GetPublicKeyId()), receipt.Headers.Protected[cose.HeaderLabelKeyID])
-	require.Equal(t, "did:web:localhost", receipt.Headers.Protected[signer.ISSUER_HEADER_KEY])
+
+	cwt, ok := receipt.Headers.Protected[signer.CWT_CLAIMS_HEADER].(map[interface{}]interface{})
+	require.True(t, ok)
+	require.Equal(t, cwt[signer.CWT_CLAIMS_ISSUER_KEY], interface{}("did:web:localhost"))
+
 	require.Empty(t, receipt.Payload)
 	require.NotEmpty(t, receipt.Signature)
 }
@@ -101,7 +107,11 @@ func Test_Countersign_embedded(t *testing.T) {
 			require.NotEmpty(t, receipt.Headers.Protected)
 			require.Equal(t, cose.AlgorithmES256, receipt.Headers.Protected[cose.HeaderLabelAlgorithm])
 			require.Equal(t, []byte("#"+tmpKeystore.GetPublicKeyId()), receipt.Headers.Protected[cose.HeaderLabelKeyID])
-			require.Equal(t, "did:web:localhost", receipt.Headers.Protected[signer.ISSUER_HEADER_KEY])
+
+			cwt, ok := receipt.Headers.Protected[signer.CWT_CLAIMS_HEADER].(map[interface{}]interface{})
+			require.True(t, ok)
+			require.Equal(t, cwt[signer.CWT_CLAIMS_ISSUER_KEY], interface{}("did:web:localhost"))
+
 			require.Empty(t, receipt.Payload)
 			require.NotEmpty(t, receipt.Signature)
 		})

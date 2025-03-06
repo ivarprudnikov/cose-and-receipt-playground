@@ -32,7 +32,11 @@ func Test_Create_Sig(t *testing.T) {
 	kid, ok := msg.Headers.Protected[cose.HeaderLabelKeyID].([]byte)
 	require.True(t, ok)
 	require.Equal(t, kid[0], byte('#'))
-	require.Equal(t, msg.Headers.Protected[signer.ISSUER_HEADER_KEY], interface{}("did:web:foo.bar.com"))
+
+	cwt, ok := msg.Headers.Protected[signer.CWT_CLAIMS_HEADER].(map[interface{}]interface{})
+	require.True(t, ok)
+	require.Equal(t, cwt[signer.CWT_CLAIMS_ISSUER_KEY], interface{}("did:web:foo.bar.com"))
+
 	require.Equal(t, msg.Headers.Protected[signer.ISSUER_HEADER_FEED], interface{}("demo"))
 	regInfo, ok := msg.Headers.Protected[signer.ISSUER_HEADER_REG_INFO].(map[interface{}]interface{})
 	require.True(t, ok)

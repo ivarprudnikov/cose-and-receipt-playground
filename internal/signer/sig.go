@@ -38,24 +38,17 @@ func VerifySignature(signature []byte, didHttpClient *http.Client) error {
 		return fmt.Errorf("failed to unmarshal signature bytes: %w", err)
 	}
 
-	// Get issuer from one of the headers
-	// 391 is the older SCITT draft
-	// CWT issuer is the newer SCITT draft
-	issuerRaw := msg.Headers.Protected[ISSUER_HEADER_KEY]
+	// Get issuer from CWT claims
+	// protected[CWT_CLAIMS_HEADER].(map[any]any)[CWT_CLAIMS_ISSUER_KEY]
+	cwtRaw := msg.Headers.Protected[CWT_CLAIMS_HEADER]
+	cwt, ok := cwtRaw.(map[any]any)
+	if !ok {
+		return fmt.Errorf("issuer is not present in CWT: %v", cwtRaw)
+	}
+	issuerRaw := cwt[CWT_CLAIMS_ISSUER_KEY]
 	issuer, ok := issuerRaw.(string)
 	if !ok {
-		// test to see if it is defined elsewhere
-		// protected[CWT_CLAIMS_HEADER].(map[any]any)[CWT_CLAIMS_ISSUER_KEY]
-		cwtRaw := msg.Headers.Protected[CWT_CLAIMS_HEADER]
-		cwt, ok := cwtRaw.(map[any]any)
-		if !ok {
-			return fmt.Errorf("issuer is not present: %v", issuerRaw)
-		}
-		issuerRaw = cwt[CWT_CLAIMS_ISSUER_KEY]
-		issuer, ok = issuerRaw.(string)
-		if !ok {
-			return fmt.Errorf("issuer is not a string: %v", issuerRaw)
-		}
+		return fmt.Errorf("issuer is not a string: %v", issuerRaw)
 	}
 
 	algRaw := msg.Headers.Protected[cose.HeaderLabelAlgorithm]
