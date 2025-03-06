@@ -36,8 +36,8 @@ func Test_Create_Sig(t *testing.T) {
 	cwt, ok := msg.Headers.Protected[signer.CWT_CLAIMS_HEADER].(map[interface{}]interface{})
 	require.True(t, ok)
 	require.Equal(t, cwt[signer.CWT_CLAIMS_ISSUER_KEY], interface{}("did:web:foo.bar.com"))
+	require.Equal(t, cwt[signer.CWT_CLAIMS_SUBJECT_KEY], interface{}("demo"))
 
-	require.Equal(t, msg.Headers.Protected[signer.ISSUER_HEADER_FEED], interface{}("demo"))
 	regInfo, ok := msg.Headers.Protected[signer.ISSUER_HEADER_REG_INFO].(map[interface{}]interface{})
 	require.True(t, ok)
 	require.Greater(t, regInfo["register_by"].(int64), time.Now().Unix()+3600)

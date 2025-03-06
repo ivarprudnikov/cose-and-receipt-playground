@@ -155,8 +155,7 @@ func Test_DefaultHeaders_DidWeb(t *testing.T) {
 	cwt, ok := headers[signer.CWT_CLAIMS_HEADER].(map[interface{}]interface{})
 	require.True(t, ok)
 	require.Equal(t, cwt[signer.CWT_CLAIMS_ISSUER_KEY], interface{}("did:web:foo.bar.com%3A8080"))
-
-	require.Equal(t, headers[signer.ISSUER_HEADER_FEED], interface{}("demo"))
+	require.Equal(t, cwt[signer.CWT_CLAIMS_SUBJECT_KEY], interface{}("demo"))
 
 	regInfo, ok := headers[signer.ISSUER_HEADER_REG_INFO].(map[interface{}]interface{})
 	require.True(t, ok)
@@ -176,8 +175,7 @@ func Test_DefaultHeaders_DidX509(t *testing.T) {
 	cwt, ok := headers[signer.CWT_CLAIMS_HEADER].(map[interface{}]interface{})
 	require.True(t, ok)
 	require.Equal(t, cwt[signer.CWT_CLAIMS_ISSUER_KEY], interface{}("did:x509:0:sha256:lBSIax6_Al2wZ6TL0ToJA_vZczpTcruhtYvXLBaZt5g::subject:CN:CosePlayground"))
-
-	require.Equal(t, headers[signer.ISSUER_HEADER_FEED], interface{}("demo"))
+	require.Equal(t, cwt[signer.CWT_CLAIMS_SUBJECT_KEY], interface{}("demo"))
 
 	regInfo, ok := headers[signer.ISSUER_HEADER_REG_INFO].(map[interface{}]interface{})
 	require.True(t, ok)
