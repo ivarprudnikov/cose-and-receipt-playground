@@ -92,8 +92,8 @@ func TestSignatureCreate(t *testing.T) {
 			name:           "create from text",
 			formValues:     map[string][]string{"payload": {"hello"}},
 			status:         http.StatusOK,
-			coseHeaderKeys: []any{int64(1), int64(3), int64(4), int64(15), int64(393)},
-			coseHeaderVals: []any{"", "text/plain", "", map[interface{}]interface{}(map[interface{}]interface{}{int64(1): "did:web:localhost%3A8080", int64(2): "demo"}), ""},
+			coseHeaderKeys: []any{int64(1), int64(3), int64(4), int64(15)},
+			coseHeaderVals: []any{"", "text/plain", "", map[interface{}]interface{}(map[interface{}]interface{}{int64(1): "did:web:localhost%3A8080", int64(2): "demo"})},
 		},
 		{
 			name:       "create from hex",

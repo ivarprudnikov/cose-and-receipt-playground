@@ -2,7 +2,6 @@ package signer_test
 
 import (
 	"testing"
-	"time"
 
 	"github.com/ivarprudnikov/cose-and-receipt-playground/internal/signer"
 	"github.com/stretchr/testify/require"
@@ -156,12 +155,6 @@ func Test_DefaultHeaders_DidWeb(t *testing.T) {
 	require.True(t, ok)
 	require.Equal(t, cwt[signer.CWT_CLAIMS_ISSUER_KEY], interface{}("did:web:foo.bar.com%3A8080"))
 	require.Equal(t, cwt[signer.CWT_CLAIMS_SUBJECT_KEY], interface{}("demo"))
-
-	regInfo, ok := headers[signer.ISSUER_HEADER_REG_INFO].(map[interface{}]interface{})
-	require.True(t, ok)
-	require.Greater(t, regInfo["register_by"].(uint64), uint64(time.Now().Unix()+3600))
-	require.Equal(t, regInfo["sequence_no"], uint64(1))
-	require.LessOrEqual(t, regInfo["issuance_ts"].(uint64), uint64(time.Now().Unix()))
 }
 
 func Test_DefaultHeaders_DidX509(t *testing.T) {
@@ -176,12 +169,6 @@ func Test_DefaultHeaders_DidX509(t *testing.T) {
 	require.True(t, ok)
 	require.Equal(t, cwt[signer.CWT_CLAIMS_ISSUER_KEY], interface{}("did:x509:0:sha256:lBSIax6_Al2wZ6TL0ToJA_vZczpTcruhtYvXLBaZt5g::subject:CN:CosePlayground"))
 	require.Equal(t, cwt[signer.CWT_CLAIMS_SUBJECT_KEY], interface{}("demo"))
-
-	regInfo, ok := headers[signer.ISSUER_HEADER_REG_INFO].(map[interface{}]interface{})
-	require.True(t, ok)
-	require.Greater(t, regInfo["register_by"].(uint64), uint64(time.Now().Unix()+3600))
-	require.Equal(t, regInfo["sequence_no"], uint64(1))
-	require.LessOrEqual(t, regInfo["issuance_ts"].(uint64), uint64(time.Now().Unix()))
 }
 
 func Test_PrintHeaders(t *testing.T) {
@@ -192,7 +179,4 @@ func Test_PrintHeaders(t *testing.T) {
 	require.Contains(t, printed, "3: text/plain,")
 	require.Contains(t, printed, "4: #foobar")
 	require.Contains(t, printed, "15: [ 1: did:web:foo.bar.com%3A8080, 2: demo ]")
-	require.Contains(t, printed, "issuance_ts: ")
-	require.Contains(t, printed, "register_by: ")
-	require.Contains(t, printed, "sequence_no: 1")
 }

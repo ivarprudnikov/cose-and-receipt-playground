@@ -6,13 +6,11 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/veraison/go-cose"
 )
 
 // https://www.ietf.org/archive/id/draft-ietf-scitt-architecture-11.html
-const ISSUER_HEADER_REG_INFO = int64(393)
 const CWT_CLAIMS_HEADER = int64(15)
 const CWT_CLAIMS_ISSUER_KEY = int64(1)
 const CWT_CLAIMS_SUBJECT_KEY = int64(2)
@@ -23,11 +21,6 @@ func DefaultHeaders(issuer Issuer) cose.ProtectedHeader {
 	protected := cose.ProtectedHeader{
 		cose.HeaderLabelAlgorithm:   cose.AlgorithmES256,
 		cose.HeaderLabelContentType: DEFAULT_CONTENT_TYPE,
-		ISSUER_HEADER_REG_INFO: map[any]any{
-			"register_by": uint64(time.Now().Add(24 * time.Hour).Unix()),
-			"sequence_no": uint64(1),
-			"issuance_ts": uint64(time.Now().Unix()),
-		},
 		CWT_CLAIMS_HEADER: map[any]any{
 			CWT_CLAIMS_SUBJECT_KEY: "demo",
 		},

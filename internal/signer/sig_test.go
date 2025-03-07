@@ -5,7 +5,6 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
-	"time"
 
 	"github.com/ivarprudnikov/cose-and-receipt-playground/internal/keys"
 	"github.com/ivarprudnikov/cose-and-receipt-playground/internal/signer"
@@ -37,12 +36,6 @@ func Test_Create_Sig(t *testing.T) {
 	require.True(t, ok)
 	require.Equal(t, cwt[signer.CWT_CLAIMS_ISSUER_KEY], interface{}("did:web:foo.bar.com"))
 	require.Equal(t, cwt[signer.CWT_CLAIMS_SUBJECT_KEY], interface{}("demo"))
-
-	regInfo, ok := msg.Headers.Protected[signer.ISSUER_HEADER_REG_INFO].(map[interface{}]interface{})
-	require.True(t, ok)
-	require.Greater(t, regInfo["register_by"].(int64), time.Now().Unix()+3600)
-	require.Equal(t, regInfo["sequence_no"].(int64), int64(1))
-	require.Less(t, regInfo["issuance_ts"].(int64), time.Now().Unix()+5)
 }
 
 func Test_Create_Verify_with_default_key(t *testing.T) {
