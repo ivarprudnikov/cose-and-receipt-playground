@@ -28,7 +28,7 @@ import (
 const MAX_FORM_SIZE = int64(32 << 20) // 32 MB
 const MAX_REQ_SEC = 2
 const MAX_REQ_BURST = 4
-const TEMPLATES_MATCH = "web/*.tmpl"
+const TEMPLATES_MATCH = "web/*.tmpl.html"
 
 // templates get embedded in the binary
 //
@@ -142,7 +142,7 @@ func IndexHandler() http.HandlerFunc {
 		w.Header().Set("Expires", "0")                                         // Proxies
 		w.Header().Add("Content-Type", "text/html")
 
-		tmpl.ExecuteTemplate(w, "index.tmpl", map[string]interface{}{
+		tmpl.ExecuteTemplate(w, "index.tmpl.html", map[string]interface{}{
 			"defaultHeaders": signer.PrintHeaders(
 				signer.DefaultHeaders(
 					*signer.NewIssuer(signer.DidWeb, getHostPort(), "keyid", [][]byte{[]byte("")}),

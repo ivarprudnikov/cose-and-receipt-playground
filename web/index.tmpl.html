@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
-{{template "head.tmpl"}}
+{{template "head.tmpl.html"}}
 <body>
 
   <div class="container">
@@ -28,7 +28,7 @@
         <p>Signature will contain a DID issuer header which will point back to the did document hosted here <a
             href=".well-known/did.json">.well-known/did.json</a></p>
         
-        {{template "signature.tmpl" .}}
+        {{template "signature.tmpl.html" .}}
 
       </div>
       <div class="col-md-6">
@@ -38,7 +38,7 @@
         <p>Verification will download did:web keys from the given signature issuer and 
           will validate the signature against it.</p>
         
-        {{template "signature.verify.tmpl"}}
+        {{template "signature.verify.tmpl.html"}}
 
       </div>
     </div>
@@ -58,7 +58,7 @@
           Please refer to <a href="https://datatracker.ietf.org/doc/html/rfc9338">RFC9338</a> for more details on countersignatures.
         </p>
 
-        {{template "countersignature.tmpl"}}
+        {{template "countersignature.tmpl.html"}}
 
       </div>
 
@@ -71,7 +71,7 @@
           The receipt might be embedded into the original signature or be a separate file.
         </p>
 
-        {{template "countersignature.verify.tmpl"}}
+        {{template "countersignature.verify.tmpl.html"}}
         
       </div>
     </div>
