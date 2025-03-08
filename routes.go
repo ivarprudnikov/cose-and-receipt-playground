@@ -38,7 +38,12 @@ var templatesFs embed.FS
 var tmpl *template.Template
 
 func init() {
-	tmpl = template.Must(template.ParseFS(templatesFs, TEMPLATES_MATCH))
+	rootTmpl := template.New("funcWrapper").Funcs(template.FuncMap{
+		"YYYY": func() string {
+			return time.Now().Format("2006")
+		},
+	})
+	tmpl = template.Must(rootTmpl.ParseFS(templatesFs, TEMPLATES_MATCH))
 	matches, _ := fs.Glob(templatesFs, TEMPLATES_MATCH)
 	for _, v := range matches {
 		log.Printf("Using template file: %s", v)
