@@ -45,6 +45,21 @@
 
             <div class="mb-3">
 
+                <!-- select input to choose between types of signature issuer, i.e. didx509 or didweb -->
+                <div class="mb-3">
+                    <div class="form-floating">
+                        <select name="issuertype" class="form-select" id="issuertype">
+                            <option value="didx509" selected>did:x509</option>
+                            <option value="didweb">did:web</option>
+                        </select>
+                        <label for="issuertype" aria-describedby="issuertypeHelp">Signature issuer type</span>
+                    </div>
+                    <div id="issuertypeHelp" class="form-text">
+                        did:web issuer is a location where the <a href=".well-known/did.json">.well-known/did.json</a> file is hosted.
+                        did:x509 issuer will include x509 certificate chain and the issuer string will contain the CA thumbprint and details about signing cert
+                    </div>
+                </div>
+
                 <div class="input-group input-group-sm mb-3">
                     <span class="input-group-text">Header</span>
                     <input name="headerkey" type="text" class="form-control" placeholder="3" aria-label="3">

@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="en">
+{{template "head.tmpl.html"}}
+<body>
+
+  <div class="container">
+    
+    <header class="d-flex flex-wrap justify-content-center py-3 mb-4 border-bottom">
+      <a href="/" class="d-flex align-items-center mb-3 mb-md-0 me-md-auto text-dark text-decoration-none">
+        <span class="fs-4">COSE signatures</span>
+      </a>
+
+      <ul class="nav nav-pills">
+        <li class="nav-item"><a href="#about" class="nav-link">About</a></li>
+        <li class="nav-item"><a href="#createsig" class="nav-link">Sig create</a></li>
+        <li class="nav-item"><a href="#verifysig" class="nav-link">Sig verify</a></li>
+        <li class="nav-item"><a href="#createreceipt" class="nav-link">Countersign</a></li>
+        <li class="nav-item"><a href="#verifyreceipt" class="nav-link">Countersign verify</a></li>
+        <li class="nav-item"><a href=".well-known/did.json" class="nav-link">Current public keys</a></li>
+      </ul>
+    </header>
+
+    <h2>Signatures</h2>
+
+    <div class="row">
+      <div class="col-md-6">
+
+        <h3 id="createsig">Create new</h3>
+        
+        {{template "signature.tmpl.html" .}}
+
+      </div>
+      <div class="col-md-6">
+
+        <h3 id="verifysig">Verify</h3>
+        
+        {{template "signature.verify.tmpl.html"}}
+
+        <p class="text-muted">
+          Verification supports COSE_Sign1 signing envelopes with did:web or did:x509 issuers.
+          Issuers are expected to be within CWT header.
+          In case of did:web server will attempt to download did document from the issuer,
+          will search for the public key in it and will use it for verification.
+          In case of did:x509 verification will verify x5c chain, will compare CA cert thumbprint 
+          with the one in the issuer string and will verify additional signing cert policies 
+          (only subject policy is supported here).
+        </p>
+
+      </div>
+    </div>
+
+    <hr>
+
+    <h2>Countersignatures aka transparent statements aka receipts</h2>
+
+    <div class="row">
+      <div class="col-md-6">
+
+        <h3 id="createreceipt">Countersign</h3>
+
+        {{template "countersignature.tmpl.html"}}
+
+        <p class="text-muted">
+          This implementation produces a full countersignature - COSE_Countersignature. 
+          It contains a signature over the details of the submitted COSE_Sign1 parts (CounterSignatureV2).
+          Please refer to <a href="https://datatracker.ietf.org/doc/html/rfc9338">RFC9338</a> for more details on countersignatures.
+          In case when countersignature gets embedded into the original signature, then unprotected header "11" will be used.
+        </p>
+
+      </div>
+
+      <div class="col-md-6">
+
+        <h3 id="verifyreceipt">Verify countersignature</h3>
+
+        {{template "countersignature.verify.tmpl.html"}}
+
+        <p class="text-muted">
+          For the verification it is necessary to have both the receipt and the original signature.
+          The receipt might be embedded into the original signature or be a separate file.
+          If receipt is embedded it is expected to be in the unprotected header "11".
+        </p>
+        
+      </div>
+    </div>
+
+    <hr>
+
+    <h2 id="about">About</h2>
+
+    <div class="row">
+      <div class="col-md-6">
+        <p>
+          This is a playground for COSE signatures and countersignatures.
+          It is implemented in Go and is <a href="https://github.com/ivarprudnikov/cose-and-receipt-playground">opensource</a>.
+        </p>
+        <p>
+          I needed this playground to quickly create signatures when developing tools that rely on them.
+          It is not perfect but is fairly easy to use and is extensible.
+        </p>
+      </div>
+      <div class="col-md-6">
+        <p>To preview signature use the following websites</p>
+        <ul>
+          <li>
+            <a href="https://gluecose.github.io/cose-viewer/">https://gluecose.github.io/cose-viewer/</a>
+          </li>
+          <li>
+            <a href="https://cbor.me/">https://cbor.me/</a>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <footer class="d-flex flex-wrap justify-content-between align-items-center py-3 my-4 border-top">
+      <p class="col-md-4 mb-0 text-muted">© 2023 - {{ YYYY }}</p>
+
+      <ul class="nav col-md-4 justify-content-end">
+        <li class="nav-item"><a href="https://github.com/ivarprudnikov/cose-and-receipt-playground"
+            class="nav-link px-2 text-muted">Source code</a></li>
+      </ul>
+    </footer>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"
+    integrity="sha384-w76AqPfDkMBDXo30jS1Sgez6pr3x5MlQ1ZAGC+nuZB+EYdgRZgiwxhTBTkF7CXvN"
+    crossorigin="anonymous"></script>
+</body>
+
+</html>

@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	main "github.com/ivarprudnikov/cose-and-receipt-playground"
+	"github.com/ivarprudnikov/cose-and-receipt-playground/internal/keys"
 	"github.com/stretchr/testify/require"
 	"github.com/veraison/go-cose"
 )
@@ -52,7 +53,11 @@ func TestIndex(t *testing.T) {
 }
 
 func TestDidDoc(t *testing.T) {
-	handler := main.DidHandler()
+	tmpDir := t.TempDir()
+	tmpKeystore, err := keys.NewKeyStoreIn(tmpDir)
+	require.NoError(t, err)
+
+	handler := main.DidHandler(tmpKeystore)
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	w := httptest.NewRecorder()
 	handler.ServeHTTP(w, req)
@@ -87,8 +92,8 @@ func TestSignatureCreate(t *testing.T) {
 			name:           "create from text",
 			formValues:     map[string][]string{"payload": {"hello"}},
 			status:         http.StatusOK,
-			coseHeaderKeys: []any{int64(1), int64(3), int64(4), int64(391), int64(392), int64(393)},
-			coseHeaderVals: []any{"", "text/plain", "", "did:web:localhost%3A8080", "demo", ""},
+			coseHeaderKeys: []any{int64(1), int64(3), int64(4), int64(15)},
+			coseHeaderVals: []any{"", "text/plain", "", map[interface{}]interface{}(map[interface{}]interface{}{int64(1): "did:web:localhost%3A8080", int64(2): "demo"})},
 		},
 		{
 			name:       "create from hex",
@@ -120,14 +125,17 @@ func TestSignatureCreate(t *testing.T) {
 		},
 		{
 			name:           "adds custom headers",
-			formValues:     map[string][]string{"payload": {"hello"}, "headerkey": {"33[0]", "33[1]", "33[2]"}, "headerval": {"a", "b", "c", "d", "e"}},
+			formValues:     map[string][]string{"payload": {"hello"}, "headerkey": {"77777[0]", "77777[1]", "77777[2]"}, "headerval": {"a", "b", "c", "d", "e"}},
 			status:         http.StatusOK,
-			coseHeaderKeys: []any{int64(33)},
+			coseHeaderKeys: []any{int64(77777)},
 			coseHeaderVals: []any{[]any{"a", "b", "c"}},
 		},
 	}
 
-	handler := main.SigCreateHandler()
+	tmpDir := t.TempDir()
+	tmpKeystore, err := keys.NewKeyStoreIn(tmpDir)
+	require.NoError(t, err)
+	handler := main.SigCreateHandler(tmpKeystore)
 
 	for _, tc := range tests {
 		t.Run(tc.name, func(t *testing.T) {

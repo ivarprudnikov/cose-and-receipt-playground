@@ -79,7 +79,7 @@ func Test_Did_ResolvePublicKey(t *testing.T) {
 	require.NoError(t, err)
 
 	tlsServer := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		didDoc, err := keys.CreateDoc(strings.ReplaceAll(r.Host, ":", "%3A"), privateKey.Public())
+		didDoc, err := keys.CreateDoc(strings.ReplaceAll(r.Host, ":", "%3A"), privateKey.Public(), []string{})
 		require.NoError(t, err)
 		w.WriteHeader(http.StatusOK)
 		w.Write([]byte(didDoc))
@@ -88,7 +88,7 @@ func Test_Did_ResolvePublicKey(t *testing.T) {
 	serverUrl := strings.TrimPrefix(tlsServer.URL, "https://")
 	serverUrl = strings.ReplaceAll(serverUrl, ":", "%3A")
 
-	did := keys.Did{Issuer: "did:web:" + serverUrl, KeyId: keys.GetPublicKeyIdDefault(), Client: tlsServer.Client()}
+	did := keys.Did{Issuer: "did:web:" + serverUrl, KeyId: keys.PubKeyDerHash(privateKey.Public()), Client: tlsServer.Client()}
 	parsedPubKey, err := did.ResolvePublicKey()
 	require.NoError(t, err)
 

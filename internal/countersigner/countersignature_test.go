@@ -35,14 +35,20 @@ func Test_GetCountersignHeaders(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			hdr := countersigner.GetCountersignHeaders(tc.hostport)
-			require.Equal(t, tc.expectedIssuer, hdr.Protected[signer.ISSUER_HEADER_KEY])
+			hdr := countersigner.GetCountersignHeaders(tc.hostport, "foobar", [][]byte{[]byte("cert1"), []byte("cert2")})
+			cwt, ok := hdr.Protected[signer.CWT_CLAIMS_HEADER].(map[interface{}]interface{})
+			require.True(t, ok)
+			require.Equal(t, tc.expectedIssuer, cwt[signer.CWT_CLAIMS_ISSUER_KEY])
 		})
 	}
 }
 
 func Test_Countersign(t *testing.T) {
-	receipt_b, err := countersigner.Countersign(cose.Sign1Message{}, "localhost", false)
+	tmpDir := t.TempDir()
+	tmpKeystore, err := keys.NewKeyStoreIn(tmpDir)
+	require.NoError(t, err)
+
+	receipt_b, err := countersigner.Countersign(cose.Sign1Message{}, tmpKeystore, "localhost", false)
 	require.NoError(t, err)
 	require.NotEmpty(t, receipt_b)
 
@@ -52,13 +58,21 @@ func Test_Countersign(t *testing.T) {
 	require.NotNil(t, receipt)
 	require.NotEmpty(t, receipt.Headers.Protected)
 	require.Equal(t, cose.AlgorithmES256, receipt.Headers.Protected[cose.HeaderLabelAlgorithm])
-	require.Equal(t, []byte("#"+keys.GetPublicKeyIdDefault()), receipt.Headers.Protected[cose.HeaderLabelKeyID])
-	require.Equal(t, "did:web:localhost", receipt.Headers.Protected[signer.ISSUER_HEADER_KEY])
+	require.Equal(t, []byte("#"+tmpKeystore.GetPublicKeyId()), receipt.Headers.Protected[cose.HeaderLabelKeyID])
+
+	cwt, ok := receipt.Headers.Protected[signer.CWT_CLAIMS_HEADER].(map[interface{}]interface{})
+	require.True(t, ok)
+	require.Equal(t, cwt[signer.CWT_CLAIMS_ISSUER_KEY], interface{}("did:web:localhost"))
+
 	require.Empty(t, receipt.Payload)
 	require.NotEmpty(t, receipt.Signature)
 }
 
 func Test_Countersign_embedded(t *testing.T) {
+
+	tmpDir := t.TempDir()
+	tmpKeystore, err := keys.NewKeyStoreIn(tmpDir)
+	require.NoError(t, err)
 
 	msg1 := cose.NewSign1Message()
 	msg1.Headers.Protected[cose.HeaderLabelAlgorithm] = cose.AlgorithmES256
@@ -72,7 +86,7 @@ func Test_Countersign_embedded(t *testing.T) {
 
 	for idx, original := range []cose.Sign1Message{*msg1, msg2} {
 		t.Run(fmt.Sprintf("embedded message %d", idx), func(t *testing.T) {
-			embedded_b, err := countersigner.Countersign(original, "localhost", true)
+			embedded_b, err := countersigner.Countersign(original, tmpKeystore, "localhost", true)
 			require.NoError(t, err)
 			require.NotEmpty(t, embedded_b)
 
@@ -92,8 +106,12 @@ func Test_Countersign_embedded(t *testing.T) {
 			require.NotNil(t, receipt)
 			require.NotEmpty(t, receipt.Headers.Protected)
 			require.Equal(t, cose.AlgorithmES256, receipt.Headers.Protected[cose.HeaderLabelAlgorithm])
-			require.Equal(t, []byte("#"+keys.GetPublicKeyIdDefault()), receipt.Headers.Protected[cose.HeaderLabelKeyID])
-			require.Equal(t, "did:web:localhost", receipt.Headers.Protected[signer.ISSUER_HEADER_KEY])
+			require.Equal(t, []byte("#"+tmpKeystore.GetPublicKeyId()), receipt.Headers.Protected[cose.HeaderLabelKeyID])
+
+			cwt, ok := receipt.Headers.Protected[signer.CWT_CLAIMS_HEADER].(map[interface{}]interface{})
+			require.True(t, ok)
+			require.Equal(t, cwt[signer.CWT_CLAIMS_ISSUER_KEY], interface{}("did:web:localhost"))
+
 			require.Empty(t, receipt.Payload)
 			require.NotEmpty(t, receipt.Signature)
 		})
@@ -102,14 +120,18 @@ func Test_Countersign_embedded(t *testing.T) {
 }
 
 func Test_countersign_then_verify(t *testing.T) {
+	tmpDir := t.TempDir()
+	tmpKeystore, err := keys.NewKeyStoreIn(tmpDir)
+	require.NoError(t, err)
+
 	target := cose.NewSign1Message()
-	result, err := countersigner.Countersign(*target, "localhost", false)
+	result, err := countersigner.Countersign(*target, tmpKeystore, "localhost", false)
 	require.NoError(t, err)
 	require.NotEmpty(t, result)
 
 	var countersignature cose.Sign1Message
 	err = countersignature.UnmarshalCBOR(result)
 	require.NoError(t, err)
-	err = countersigner.Verify(countersignature, *target)
+	err = countersigner.Verify(countersignature, *target, tmpKeystore)
 	require.NoError(t, err)
 }

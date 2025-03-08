@@ -28,7 +28,7 @@ import (
 const MAX_FORM_SIZE = int64(32 << 20) // 32 MB
 const MAX_REQ_SEC = 2
 const MAX_REQ_BURST = 4
-const TEMPLATES_MATCH = "web/*.tmpl"
+const TEMPLATES_MATCH = "web/*.tmpl.html"
 
 // templates get embedded in the binary
 //
@@ -38,20 +38,25 @@ var templatesFs embed.FS
 var tmpl *template.Template
 
 func init() {
-	tmpl = template.Must(template.ParseFS(templatesFs, TEMPLATES_MATCH))
+	rootTmpl := template.New("funcWrapper").Funcs(template.FuncMap{
+		"YYYY": func() string {
+			return time.Now().Format("2006")
+		},
+	})
+	tmpl = template.Must(rootTmpl.ParseFS(templatesFs, TEMPLATES_MATCH))
 	matches, _ := fs.Glob(templatesFs, TEMPLATES_MATCH)
 	for _, v := range matches {
 		log.Printf("Using template file: %s", v)
 	}
 }
 
-func AddRoutes(mux *http.ServeMux) {
+func AddRoutes(mux *http.ServeMux, keystore *keys.KeyStore) {
 	pre := newAppMiddleware()
-	mux.Handle("GET /.well-known/did.json", pre(DidHandler()))
-	mux.Handle("POST /signature/create", pre(SigCreateHandler()))
+	mux.Handle("GET /.well-known/did.json", pre(DidHandler(keystore)))
+	mux.Handle("POST /signature/create", pre(SigCreateHandler(keystore)))
 	mux.Handle("POST /signature/verify", pre(sigVerifyHandler()))
-	mux.Handle("POST /receipt/create", pre(receiptCreateHandler()))
-	mux.Handle("POST /receipt/verify", pre(receiptVerifyHandler()))
+	mux.Handle("POST /receipt/create", pre(receiptCreateHandler(keystore)))
+	mux.Handle("POST /receipt/verify", pre(receiptVerifyHandler(keystore)))
 	mux.Handle("GET /", pre(IndexHandler()))
 	mux.Handle("GET /index.html", pre(IndexHandler()))
 	mux.Handle("GET /favicon.ico", pre(FaviconHandler()))
@@ -142,8 +147,12 @@ func IndexHandler() http.HandlerFunc {
 		w.Header().Set("Expires", "0")                                         // Proxies
 		w.Header().Add("Content-Type", "text/html")
 
-		tmpl.ExecuteTemplate(w, "index.tmpl", map[string]interface{}{
-			"defaultHeaders": signer.PrintHeaders(signer.DefaultHeaders(getHostPort())),
+		tmpl.ExecuteTemplate(w, "index.tmpl.html", map[string]interface{}{
+			"defaultHeaders": signer.PrintHeaders(
+				signer.DefaultHeaders(
+					*signer.NewIssuer(signer.DidWeb, getHostPort(), "keyid", [][]byte{[]byte("")}),
+				),
+			),
 		})
 	}
 }
@@ -172,9 +181,9 @@ func FaviconHandler() http.HandlerFunc {
 }
 
 // DidHandler returns a DID document for the current server
-func DidHandler() http.HandlerFunc {
+func DidHandler(keystore *keys.KeyStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		didDoc, err := keys.CreateDoc(getHostPort(), keys.GetKeyDefault().Public())
+		didDoc, err := keys.CreateDoc(getHostPort(), keystore.GetPubKey(), keystore.GetB64CertChain())
 		if err != nil {
 			sendError(w, "failed to create did doc", err)
 			return
@@ -185,7 +194,7 @@ func DidHandler() http.HandlerFunc {
 }
 
 // SigCreateHandler creates a signature for a payload provided in the request
-func SigCreateHandler() http.HandlerFunc {
+func SigCreateHandler(keystore *keys.KeyStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		payloadB, err := readBytesFromForm(r, "payloadfile", "payloadhex", "payload", false)
 		if err != nil {
@@ -211,7 +220,16 @@ func SigCreateHandler() http.HandlerFunc {
 		payloadHash := sha256.Sum256(payloadB)
 		payloadHashHex := hex.EncodeToString(payloadHash[:])
 
-		signature, err := signer.CreateSignature(payloadB, kv, getHostPort())
+		issuerProfile := signer.DidWeb
+		issuerType := r.PostForm.Get("issuertype")
+		if issuerType == "didx509" {
+			issuerProfile = signer.DidX509
+		} else if issuerType == "didweb" {
+			issuerProfile = signer.DidWeb
+		}
+
+		issuer := signer.NewIssuer(issuerProfile, getHostPort(), keystore.GetPublicKeyId(), keystore.GetCertChain())
+		signature, err := signer.CreateSignature(issuer, payloadB, kv, keystore)
 		if err != nil {
 			sendError(w, "failed to create signature", err)
 			return
@@ -248,7 +266,7 @@ func sigVerifyHandler() http.HandlerFunc {
 }
 
 // receiptCreateHandler creates a receipt for a signature provided in the request
-func receiptCreateHandler() http.HandlerFunc {
+func receiptCreateHandler(keystore *keys.KeyStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		STANDALONE := "standalone"
 
@@ -275,7 +293,7 @@ func receiptCreateHandler() http.HandlerFunc {
 			sendError(w, "failed to unmarshal signature bytes", err)
 			return
 		}
-		receipt, err := countersigner.Countersign(msg, getHostPort(), receiptType != STANDALONE)
+		receipt, err := countersigner.Countersign(msg, keystore, getHostPort(), receiptType != STANDALONE)
 		if err != nil {
 			sendError(w, "failed to countersign", err)
 			return
@@ -297,7 +315,7 @@ func receiptCreateHandler() http.HandlerFunc {
 }
 
 // receiptVerifyHandler verifies a receipt and a signature provided in the request
-func receiptVerifyHandler() http.HandlerFunc {
+func receiptVerifyHandler(keystore *keys.KeyStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		signatureB, err := readBytesFromForm(r, "signaturefile", "signaturehex", "", false)
 		if err != nil {
@@ -333,7 +351,7 @@ func receiptVerifyHandler() http.HandlerFunc {
 			return
 		}
 
-		err = countersigner.Verify(receipt, signature)
+		err = countersigner.Verify(receipt, signature, keystore)
 		if err != nil {
 			sendError(w, "failed to verify receipt", err)
 			return
