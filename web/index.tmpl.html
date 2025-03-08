@@ -11,6 +11,7 @@
       </a>
 
       <ul class="nav nav-pills">
+        <li class="nav-item"><a href="#about" class="nav-link">About</a></li>
         <li class="nav-item"><a href="#createsig" class="nav-link">Sig create</a></li>
         <li class="nav-item"><a href="#verifysig" class="nav-link">Sig verify</a></li>
         <li class="nav-item"><a href="#createreceipt" class="nav-link">Countersign</a></li>
@@ -85,15 +86,31 @@
 
     <hr>
 
-    <p>To preview signature use the following websites</p>
-    <ul>
-      <li>
-        <a href="https://gluecose.github.io/cose-viewer/">https://gluecose.github.io/cose-viewer/</a>
-      </li>
-      <li>
-        <a href="https://cbor.me/">https://cbor.me/</a>
-      </li>
-    </ul>
+    <h2 id="about">About</h2>
+
+    <div class="row">
+      <div class="col-md-6">
+        <p>
+          This is a playground for COSE signatures and countersignatures.
+          It is implemented in Go and is <a href="https://github.com/ivarprudnikov/cose-and-receipt-playground">opensource</a>.
+        </p>
+        <p>
+          I needed this playground to quickly create signatures when developing tools that rely on them.
+          It is not perfect but is fairly easy to use and is extensible.
+        </p>
+      </div>
+      <div class="col-md-6">
+        <p>To preview signature use the following websites</p>
+        <ul>
+          <li>
+            <a href="https://gluecose.github.io/cose-viewer/">https://gluecose.github.io/cose-viewer/</a>
+          </li>
+          <li>
+            <a href="https://cbor.me/">https://cbor.me/</a>
+          </li>
+        </ul>
+      </div>
+    </div>
 
     <footer class="d-flex flex-wrap justify-content-between align-items-center py-3 my-4 border-top">
       <p class="col-md-4 mb-0 text-muted">© 2023 - {{ YYYY }}</p>
