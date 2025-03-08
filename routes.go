@@ -215,8 +215,15 @@ func SigCreateHandler(keystore *keys.KeyStore) http.HandlerFunc {
 		payloadHash := sha256.Sum256(payloadB)
 		payloadHashHex := hex.EncodeToString(payloadHash[:])
 
-		// TODO add support for custom issuer profile switch
-		issuer := signer.NewIssuer(signer.DidWeb, getHostPort(), keystore.GetPublicKeyId(), keystore.GetCertChain())
+		issuerProfile := signer.DidWeb
+		issuerType := r.PostForm.Get("issuertype")
+		if issuerType == "didx509" {
+			issuerProfile = signer.DidX509
+		} else if issuerType == "didweb" {
+			issuerProfile = signer.DidWeb
+		}
+
+		issuer := signer.NewIssuer(issuerProfile, getHostPort(), keystore.GetPublicKeyId(), keystore.GetCertChain())
 		signature, err := signer.CreateSignature(issuer, payloadB, kv, keystore)
 		if err != nil {
 			sendError(w, "failed to create signature", err)

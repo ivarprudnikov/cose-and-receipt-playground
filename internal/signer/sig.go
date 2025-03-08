@@ -74,13 +74,21 @@ func VerifySignature(signature []byte, didHttpClient *http.Client) error {
 		}
 	} else if strings.HasPrefix(issuer, DidX509.String()) {
 		x5cRaw := msg.Headers.Protected[cose.HeaderLabelX5Chain]
-		x5c, ok := x5cRaw.([][]byte)
+		x5cAny, ok := x5cRaw.([]interface{})
 		if !ok {
-			return fmt.Errorf("x5c is not a byte array: %v", x5cRaw)
+			return fmt.Errorf("x5c is not an array: %v", x5cRaw)
+		}
+		x5c := make([][]byte, len(x5cAny))
+		for i, cert := range x5cAny {
+			certDer, ok := cert.([]byte)
+			if !ok {
+				return fmt.Errorf("x5c cert is not bytes: %v", cert)
+			}
+			x5c[i] = certDer
 		}
 		pubKey, err = ResolveDidX509(issuer, x5c)
 		if err != nil {
-			return fmt.Errorf("failed to validate issuer %s: %w", issuer, err)
+			return fmt.Errorf("failed to validate issuer and chain %s: %w", issuer, err)
 		}
 	} else {
 		return fmt.Errorf("unsupported issuer: %s", issuer)

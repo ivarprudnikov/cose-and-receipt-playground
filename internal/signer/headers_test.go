@@ -1,6 +1,8 @@
 package signer_test
 
 import (
+	"crypto/x509"
+	"encoding/pem"
 	"testing"
 
 	"github.com/ivarprudnikov/cose-and-receipt-playground/internal/signer"
@@ -157,17 +159,45 @@ func Test_DefaultHeaders_DidWeb(t *testing.T) {
 	require.Equal(t, cwt[signer.CWT_CLAIMS_SUBJECT_KEY], interface{}("demo"))
 }
 
-func Test_DefaultHeaders_DidX509(t *testing.T) {
-	issuer := signer.NewIssuer(signer.DidX509, "foo.bar.com:8080", "foobar", [][]byte{[]byte("chain")})
+func Test_DefaultHeaders_DidX509(t *testing.T) { // test x509 certificate
+	certPem := `-----BEGIN CERTIFICATE-----
+MIIDLzCCAhegAwIBAgIUT0RL5CuegXHg+ZAmIryZtxYcXjEwDQYJKoZIhvcNAQEL
+BQAwJzEMMAoGA1UECwwDd2ViMRcwFQYDVQQDDA53d3cuc2VydmVyLmNvbTAeFw0y
+NTAzMDgwMDE5NTZaFw0zNTAzMDYwMDE5NTZaMCcxDDAKBgNVBAsMA3dlYjEXMBUG
+A1UEAwwOd3d3LnNlcnZlci5jb20wggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEK
+AoIBAQDckpYwwJR9NyKmViAqbeuRHATyW6+h/rl3sUVGe08Y0vo4Q1DcWjCNXt/q
+Jc03jgvMFeuowpjqyOp6TUh7pKidh3Wx6AlmWepnzXedJ73Nvd37Klae8YbRy81j
+KPvXKigKn83uJghWc3C4ho8O+jHLqo58tPYa5ciS9Esg9F5infiUCMKKLngs8Ukr
+AhY45zk3GM2p4hA48+18FwT9WNyp5lpvfmwokrwDUByH2VO1WA3Hs3l9/s9vjCYX
+okDVBSIFz0LVnSylMNipfWFsFiCe1Qn7BkGmsKUxI1ngsVbrS3WMnq7IQH02q6iH
+vCTaSz06euPBL0qeEGYBsn48F1QDAgMBAAGjUzBRMB0GA1UdDgQWBBRw2P/JCMNZ
+uLI42UNAx+QYwBqvlTAfBgNVHSMEGDAWgBRw2P/JCMNZuLI42UNAx+QYwBqvlTAP
+BgNVHRMBAf8EBTADAQH/MA0GCSqGSIb3DQEBCwUAA4IBAQCZZoEMy+6Dj/VdMhkN
+Qr8B+Tw632T42SjgZye7kcw2dEZIieCgfKXyjqTxXru0IBSJLgPDRl8s4tHodghM
+vl1baDJtMcpB6S3OAD7d+42ykNfBHK/vfc3qXbe67wKYxz+LHpiQrfJxUBf1zVk2
+tHSbc2AH7XdEYbMHF1rpP/JuV4cU98Ubtt9UluyPiKiMOAavu3Wh5988c5Tj75xh
+e61MIvwfVwEwglqJU9E9XgVBmYxyzZxW5KRql/VNLde8LSVNz2oI0pSIKKobfwU4
+L3GUAplB3usAtxTExavEkNXQhMiOAMUCzkfRWXHEz6W1a0NnkDCxF9JArTUlVeyY
+BpNe
+-----END CERTIFICATE-----
+`
+	block, _ := pem.Decode([]byte(certPem))
+	cert, err := x509.ParseCertificate(block.Bytes)
+	require.NoError(t, err)
+	require.NotNil(t, cert)
+
+	certChain := [][]byte{cert.Raw, cert.Raw}
+
+	issuer := signer.NewIssuer(signer.DidX509, "foo.bar.com:8080", "foobar", certChain)
 	headers := signer.DefaultHeaders(*issuer)
 	require.NotNil(t, headers)
 	require.Equal(t, headers[cose.HeaderLabelAlgorithm], interface{}(cose.AlgorithmES256))
 	require.Equal(t, headers[cose.HeaderLabelContentType], interface{}("text/plain"))
-	require.Equal(t, headers[cose.HeaderLabelX5Chain], interface{}([][]byte{[]byte("chain")}))
+	require.Equal(t, headers[cose.HeaderLabelX5Chain], interface{}([][]byte{cert.Raw, cert.Raw}))
 
 	cwt, ok := headers[signer.CWT_CLAIMS_HEADER].(map[interface{}]interface{})
 	require.True(t, ok)
-	require.Equal(t, cwt[signer.CWT_CLAIMS_ISSUER_KEY], interface{}("did:x509:0:sha256:lBSIax6_Al2wZ6TL0ToJA_vZczpTcruhtYvXLBaZt5g::subject:CN:CosePlayground"))
+	require.Equal(t, cwt[signer.CWT_CLAIMS_ISSUER_KEY], interface{}("did:x509:0:sha256:-PzQNPfBWEBI2kbwlzfpeOssuKzedW1eR-y1a_Q-cv4::subject:CN:www.server.com"))
 	require.Equal(t, cwt[signer.CWT_CLAIMS_SUBJECT_KEY], interface{}("demo"))
 }
 

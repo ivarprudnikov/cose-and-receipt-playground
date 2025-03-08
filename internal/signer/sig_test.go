@@ -58,7 +58,7 @@ func Test_Create_Verify_with_default_key(t *testing.T) {
 	require.NoError(t, err)
 }
 
-func Test_Create_Verify_with_did(t *testing.T) {
+func Test_Create_Verify_with_didweb_server(t *testing.T) {
 	tmpDir := t.TempDir()
 	tmpKeystore, err := keys.NewKeyStoreIn(tmpDir)
 	require.NoError(t, err)
@@ -77,5 +77,18 @@ func Test_Create_Verify_with_did(t *testing.T) {
 	require.NoError(t, err)
 
 	err = signer.VerifySignature(sig, tlsServer.Client())
+	require.NoError(t, err)
+}
+
+func Test_Create_Verify_with_didx509(t *testing.T) {
+	tmpDir := t.TempDir()
+	tmpKeystore, err := keys.NewKeyStoreIn(tmpDir)
+	require.NoError(t, err)
+
+	issuer := signer.NewIssuer(signer.DidX509, "foo.bar.com", tmpKeystore.GetPublicKeyId(), tmpKeystore.GetCertChain())
+	sig, err := signer.CreateSignature(issuer, []byte("hello world"), map[string]string{"3": "foo/bar"}, tmpKeystore)
+	require.NoError(t, err)
+
+	err = signer.VerifySignature(sig, nil)
 	require.NoError(t, err)
 }

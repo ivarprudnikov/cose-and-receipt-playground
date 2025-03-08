@@ -6,10 +6,10 @@ import (
 	"crypto/sha512"
 	"crypto/x509"
 	"encoding/base64"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"hash"
+	"net/url"
 	"strings"
 )
 
@@ -50,11 +50,11 @@ func (i *Issuer) GetIss() string {
 		hostport := strings.ReplaceAll(i.hostPort, ":", "%3A")
 		return DidWeb.String() + ":" + hostport
 	} else if i.profile == DidX509 {
-		// https://github.com/microsoft/did-x509
-		caCertDer := i.x5chain[len(i.x5chain)-1]
-		thumb := sha256.Sum256(caCertDer)
-		thumbBase64Url := base64.RawURLEncoding.EncodeToString(thumb[:])
-		return DidX509.String() + ":0:sha256:" + thumbBase64Url + "::subject:CN:CosePlayground"
+		iss, err := DidX509FromChain(i.x5chain)
+		if err != nil {
+			return "unknown_issuer"
+		}
+		return iss
 	} else {
 		return "unknown_issuer"
 	}
@@ -66,6 +66,24 @@ func (i *Issuer) GetKid() []byte {
 
 func (i *Issuer) GetX5c() [][]byte {
 	return i.x5chain
+}
+
+// https://github.com/microsoft/did-x509
+func DidX509FromChain(x5c [][]byte) (string, error) {
+	if len(x5c) < 2 {
+		return "", errors.New("must be more than one certificate in the chain")
+	}
+	caCertDer := x5c[len(x5c)-1]
+	thumb := sha256.Sum256(caCertDer)
+	thumbBase64Url := base64.RawURLEncoding.EncodeToString(thumb[:])
+
+	signingCertDer := x5c[0]
+	signingCert, err := x509.ParseCertificate(signingCertDer)
+	if err != nil {
+		return "", fmt.Errorf("failed to parse signing certificate: %w", err)
+	}
+	commonName := signingCert.Subject.CommonName
+	return DidX509.String() + ":0:sha256:" + thumbBase64Url + "::subject:CN:" + commonName, nil
 }
 
 func ResolveDidX509(did string, x5c [][]byte) (crypto.PublicKey, error) {
@@ -84,7 +102,7 @@ func ResolveDidX509(did string, x5c [][]byte) (crypto.PublicKey, error) {
 		return nil, errors.New("invalid CA fingerprint format")
 	}
 	certHashAlg := certDigest[0]
-	certHash := certDigest[1]
+	certHashB64Url := certDigest[1]
 	var hashFunc hash.Hash
 	switch certHashAlg {
 	case "sha256":
@@ -101,26 +119,29 @@ func ResolveDidX509(did string, x5c [][]byte) (crypto.PublicKey, error) {
 		return nil, errors.New("must be more than one certificate in the chain")
 	}
 
-	var expectedHashes []string
+	var expectedThumbs []string
 	for _, certDer := range x5c[1:] {
-		expectedHashes = append(expectedHashes, hex.EncodeToString(hashFunc.Sum(certDer)))
+		hashFunc.Reset()
+		hashFunc.Write(certDer)
+		thumb := hashFunc.Sum(nil)
+		thumbBase64Url := base64.RawURLEncoding.EncodeToString(thumb[:])
+		expectedThumbs = append(expectedThumbs, thumbBase64Url)
 	}
 
 	matchingCertIdx := -1
-	for idx, expected := range expectedHashes {
-		if certHash == expected {
+	for idx, expected := range expectedThumbs {
+		if certHashB64Url == expected {
 			matchingCertIdx = idx + 1
 			break
 		}
 	}
 	if matchingCertIdx < 0 {
-		return nil, fmt.Errorf("invalid CA fingerprint, expected one of: %v", expectedHashes)
+		return nil, fmt.Errorf("invalid CA fingerprint %s, expected one of: %v", certHashB64Url, expectedThumbs)
 	}
 
-	// TODO parse the CA cert and validate the policies
-	_, err := x509.ParseCertificate(x5c[matchingCertIdx])
+	signingcert, err := x509.ParseCertificate(x5c[0])
 	if err != nil {
-		return nil, fmt.Errorf("failed to parse CA certificate: %w", err)
+		return nil, fmt.Errorf("failed to parse signing certificate: %w", err)
 	}
 
 	for _, policy := range policies[1:] {
@@ -129,94 +150,45 @@ func ResolveDidX509(did string, x5c [][]byte) (crypto.PublicKey, error) {
 			return nil, fmt.Errorf("invalid cert policy: %v", policy)
 		}
 		name := policyParts[0]
-		// value := policyParts[1]
+		value := policyParts[1]
 
 		switch name {
-		// case "subject":
-		// 	subjectParts := strings.Split(value, ":")
-		// 	if len(subjectParts) == 0 || len(subjectParts)%2 != 0 {
-		// 		return nil, errors.New("key-value pairs required in subject")
-		// 	}
+		case "subject":
+			subjectParts := strings.Split(value, ":")
+			if len(subjectParts) == 0 || len(subjectParts)%2 != 0 {
+				return nil, errors.New("key-value pairs required in subject")
+			}
 
-		// 	fields := make(map[string]string)
-		// 	for i := 0; i < len(subjectParts); i += 2 {
-		// 		key := subjectParts[i]
-		// 		val, err := pctdecode(subjectParts[i+1])
-		// 		if err != nil {
-		// 			return nil, err
-		// 		}
-		// 		if _, exists := fields[key]; exists {
-		// 			return nil, errors.New("duplicate subject fields")
-		// 		}
-		// 		fields[key] = val
-		// 	}
+			fields := make(map[string]string)
+			for i := 0; i < len(subjectParts); i += 2 {
+				key := subjectParts[i]
+				val, err := url.QueryUnescape(subjectParts[i+1])
+				if err != nil {
+					return nil, err
+				}
+				if _, exists := fields[key]; exists {
+					return nil, errors.New("duplicate subject fields")
+				}
+				fields[key] = val
+			}
 
-		// 	for key, val := range fields {
-		// 		if expectedVal, ok := decoded[0].Subject[key]; !ok || val != expectedVal {
-		// 			return nil, fmt.Errorf("invalid subject value: %s = %s, expected: %s", key, val, expectedVal)
-		// 		}
-		// 	}
-
-		// case "san":
-		// 	sanParts := strings.Split(value, ":")
-		// 	if len(sanParts) != 2 {
-		// 		return nil, errors.New("exactly one SAN type and value required")
-		// 	}
-		// 	sanType := sanParts[0]
-		// 	sanValue, err := pctdecode(sanParts[1])
-		// 	if err != nil {
-		// 		return err
-		// 	}
-
-		// 	sans, ok := decoded[0].Extensions["san"].([][]string)
-		// 	if !ok {
-		// 		return errors.New("invalid SAN format in certificate extensions")
-		// 	}
-		// 	found := false
-		// 	for _, san := range sans {
-		// 		if san[0] == sanType && san[1] == sanValue {
-		// 			found = true
-		// 			break
-		// 		}
-		// 	}
-		// 	if !found {
-		// 		return fmt.Errorf("invalid SAN: [%s, %s], expected one of: %v", sanType, sanValue, sans)
-		// 	}
-
-		// case "eku":
-		// 	// 2, 5, 29, 37
-		// 	// 2, 5, 29, 37, 0
-		// 	hasEKU := false
-		// 	for _, ext := range caCert.Extensions {
-		// 		if ext.Id.String() == EKU_OID {
-		// 			ext.Value
-		// 			hasEKU = true
-		// 			break
-		// 		}
-		// 	}
-
-		// 	caCertEku := caCert.ExtKeyUsage
-		// 	ekuValues, ok := caCert.Extensions["eku"].([]string)
-		// 	if !ok {
-		// 		return errors.New("no EKU extension in certificate")
-		// 	}
-		// 	found := false
-		// 	for _, eku := range ekuValues {
-		// 		if eku == value {
-		// 			found = true
-		// 			break
-		// 		}
-		// 	}
-		// 	if !found {
-		// 		return fmt.Errorf("invalid EKU: %s, expected one of: %v", value, ekuValues)
-		// 	}
-
-		// case "fulcio-issuer":
-		// 	fulcioIssuer := "https://" + pctdecode(value)
-		// 	expectedFulcioIssuer, ok := decoded[0].Extensions["fulcio_issuer"].(string)
-		// 	if !ok || fulcioIssuer != expectedFulcioIssuer {
-		// 		return fmt.Errorf("invalid Fulcio issuer: %s, expected: %s", pctencode(fulcioIssuer), pctencode(expectedFulcioIssuer))
-		// 	}
+			for key, val := range fields {
+				if key == "CN" && signingcert.Subject.CommonName != val {
+					return nil, fmt.Errorf("invalid subject value: CN = %s, expected: %s", signingcert.Subject.CommonName, val)
+				} else if key == "O" && signingcert.Subject.Organization[0] != val {
+					return nil, fmt.Errorf("invalid subject value: O = %s, expected: %s", signingcert.Subject.Organization[0], val)
+				} else if key == "OU" && signingcert.Subject.OrganizationalUnit[0] != val {
+					return nil, fmt.Errorf("invalid subject value: OU = %s, expected: %s", signingcert.Subject.OrganizationalUnit[0], val)
+				} else if key == "L" && signingcert.Subject.Locality[0] != val {
+					return nil, fmt.Errorf("invalid subject value: L = %s, expected: %s", signingcert.Subject.Locality[0], val)
+				} else if key == "ST" && signingcert.Subject.Province[0] != val {
+					return nil, fmt.Errorf("invalid subject value: ST = %s, expected: %s", signingcert.Subject.Province[0], val)
+				} else if key == "C" && signingcert.Subject.Country[0] != val {
+					return nil, fmt.Errorf("invalid subject value: C = %s, expected: %s", signingcert.Subject.Country[0], val)
+				} else if key == "SN" && signingcert.Subject.SerialNumber != val {
+					return nil, fmt.Errorf("invalid subject value: SN = %s, expected: %s", signingcert.Subject.Country[0], val)
+				}
+			}
 
 		default:
 			return nil, fmt.Errorf("unknown did:x509 policy: %s", name)
