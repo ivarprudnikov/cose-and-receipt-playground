@@ -1,10 +1,12 @@
-Cose, receipt, did:web playground
+Cose signing and countersigning playground
 =================================
 
 [![Build](https://github.com/ivarprudnikov/cose-and-receipt-playground/actions/workflows/build.yml/badge.svg)](https://github.com/ivarprudnikov/cose-and-receipt-playground/actions/workflows/build.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/ivarprudnikov/cose-and-receipt-playground)](https://goreportcard.com/report/github.com/ivarprudnikov/cose-and-receipt-playground)
 
 API/website: https://playground-cose-eastus-api.azurewebsites.net
+
+![](screenshot-2025-03-10.png)
 
 # Development
 
@@ -29,15 +31,25 @@ API/website: https://playground-cose-eastus-api.azurewebsites.net
   - Compile and deploy to Azure: [azure.fn.deploy.sh](deployments/azure.fn.deploy.sh)
   - Create required Azure infrastructure: [azure.infra.create.sh](deployments/azure.infra.create.sh)
 
-# References
+# About
 
-## Signatures and receipts
+A simple Go application that implements a COSE signing and countersigning. Works as a REST API but also as a basic website with the HTML forms.
 
+It gets deployed as a standalone Azure function app, but can be run locally as well.
+
+## Signatures and countersignatures
+
+Main RFCs used in the playground:
 - CBOR Object Signing and Encryption (COSE): Structures and Process https://datatracker.ietf.org/doc/html/rfc9052
 - CBOR Object Signing and Encryption (COSE): Countersignatures https://datatracker.ietf.org/doc/html/rfc9338 
-- SCITT community https://github.com/scitt-community
-- SCITT Architecture draft https://datatracker.ietf.org/doc/draft-ietf-scitt-architecture/
-- SCITT receipts https://datatracker.ietf.org/doc/draft-birkholz-scitt-receipts/
+
+SCITT draft defines some expectatins about the COSE signatures which the code uses as well, i.e. CWT header, but this playground does not implement required countersignature format https://www.ietf.org/archive/id/draft-ietf-scitt-architecture-11.html
+
+### Public key distribution
+
+This playground uses `did:web` issuer string and the corresponding public key distribution https://w3c-ccg.github.io/did-method-web/ although signing keys are short lived and are practical for the immediate validation only.
+
+Alternatively you can use `did:x509` issuer which will also have `x5c` chain added, but the suppot is limited, e.g. not all policies will work https://github.com/microsoft/did-x509 .
 
 ## Azure functions
 
