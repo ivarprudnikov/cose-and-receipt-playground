@@ -56,7 +56,7 @@ func AddRoutes(mux *http.ServeMux, keystore *keys.KeyStore) {
 	mux.Handle("POST /signature/create", pre(SigCreateHandler(keystore)))
 	mux.Handle("POST /signature/verify", pre(sigVerifyHandler()))
 	mux.Handle("POST /receipt/create", pre(receiptCreateHandler(keystore)))
-	mux.Handle("POST /receipt/verify", pre(receiptVerifyHandler(keystore)))
+	mux.Handle("POST /receipt/verify", pre(ReceiptVerifyHandler(keystore)))
 	mux.Handle("GET /", pre(IndexHandler()))
 	mux.Handle("GET /index.html", pre(IndexHandler()))
 	mux.Handle("GET /favicon.ico", pre(FaviconHandler()))
@@ -315,7 +315,7 @@ func receiptCreateHandler(keystore *keys.KeyStore) http.HandlerFunc {
 }
 
 // receiptVerifyHandler verifies a receipt and a signature provided in the request
-func receiptVerifyHandler(keystore *keys.KeyStore) http.HandlerFunc {
+func ReceiptVerifyHandler(keystore *keys.KeyStore) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		signatureB, err := readBytesFromForm(r, "signaturefile", "signaturehex", "", false)
 		if err != nil {
@@ -335,20 +335,22 @@ func receiptVerifyHandler(keystore *keys.KeyStore) http.HandlerFunc {
 			return
 		}
 
+		var receipt cose.Countersignature
 		if len(receiptB) == 0 {
-			embeddedReceiptRaw := signature.Headers.Unprotected[countersigner.COSE_Countersignature_header]
+			embeddedReceiptAny := signature.Headers.Unprotected[cose.HeaderLabelCounterSignatureV2]
 			var ok bool
-			receiptB, ok = embeddedReceiptRaw.([]byte)
-			if !ok || len(receiptB) == 0 {
+			var receiptPtr *cose.Countersignature
+			receiptPtr, ok = embeddedReceiptAny.(*cose.Countersignature)
+			if !ok && len(receiptB) == 0 {
 				sendError(w, "failed to get receipt bytes from both the request and the signature header", nil)
 				return
 			}
-		}
-
-		var receipt cose.Sign1Message
-		if err = receipt.UnmarshalCBOR(receiptB); err != nil {
-			sendError(w, "failed to unmarshal receipt bytes", err)
-			return
+			receipt = *receiptPtr
+		} else {
+			if err = receipt.UnmarshalCBOR(receiptB); err != nil {
+				sendError(w, "failed to unmarshal receipt bytes", err)
+				return
+			}
 		}
 
 		err = countersigner.Verify(receipt, signature, keystore)

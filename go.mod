@@ -6,7 +6,7 @@ require (
 	github.com/fxamacker/cbor/v2 v2.7.0
 	github.com/lestrrat-go/jwx v1.2.30
 	github.com/stretchr/testify v1.10.0
-	github.com/veraison/go-cose v1.2.0
+	github.com/veraison/go-cose v1.3.0
 	golang.org/x/time v0.6.0
 )
 

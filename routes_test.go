@@ -10,7 +10,9 @@ import (
 	"testing"
 
 	main "github.com/ivarprudnikov/cose-and-receipt-playground"
+	"github.com/ivarprudnikov/cose-and-receipt-playground/internal/countersigner"
 	"github.com/ivarprudnikov/cose-and-receipt-playground/internal/keys"
+	"github.com/ivarprudnikov/cose-and-receipt-playground/internal/signer"
 	"github.com/stretchr/testify/require"
 	"github.com/veraison/go-cose"
 )
@@ -181,6 +183,118 @@ func TestSignatureCreate(t *testing.T) {
 					require.Equal(t, tc.coseHeaderVals[idx], v)
 				}
 			}
+		})
+	}
+}
+
+func TestReceiptVerify(t *testing.T) {
+	tmpDir := t.TempDir()
+	tmpKeystore, err := keys.NewKeyStoreIn(tmpDir)
+	require.NoError(t, err)
+	handler := main.ReceiptVerifyHandler(tmpKeystore)
+
+	// create a valid signature
+	issuer := signer.NewIssuer(signer.DidX509, "localhost", tmpKeystore.GetPublicKeyId(), tmpKeystore.GetCertChain())
+	sig, err := signer.CreateSignature(issuer, []byte("hello"), nil, tmpKeystore)
+	require.NoError(t, err)
+	var msg cose.Sign1Message
+	err = msg.UnmarshalCBOR(sig)
+	require.NoError(t, err)
+	separate, err := countersigner.Countersign(msg, tmpKeystore, "localhost", false)
+	require.NoError(t, err)
+	embedded, err := countersigner.Countersign(msg, tmpKeystore, "localhost", true)
+	require.NoError(t, err)
+
+	type test struct {
+		name            string
+		formValues      map[string][]string
+		formFiles       map[string][]byte
+		status          int
+		expectedMessage string
+		expectedValid   bool
+	}
+	tests := []test{
+		{
+			name:   "fails without payload",
+			status: http.StatusBadRequest,
+		},
+		{
+			name:            "invalid hex",
+			formValues:      map[string][]string{"signaturehex": {"68656c6c6f"}},
+			status:          http.StatusBadRequest,
+			expectedMessage: "failed to unmarshal signature bytes",
+		},
+		{
+			name:            "invalid file",
+			formFiles:       map[string][]byte{"signaturefile": []byte("hello")},
+			status:          http.StatusBadRequest,
+			expectedMessage: "failed to unmarshal signature bytes",
+		},
+		{
+			name:            "missing receipt",
+			formFiles:       map[string][]byte{"signaturefile": sig},
+			status:          http.StatusBadRequest,
+			expectedMessage: "failed to get receipt bytes from both the request and the signature header",
+		},
+		{
+			name:          "valid separate receipt and signature",
+			formFiles:     map[string][]byte{"signaturefile": sig, "receiptfile": separate},
+			status:        http.StatusOK,
+			expectedValid: true,
+		},
+		{
+			name:          "valid embedded receipt",
+			formFiles:     map[string][]byte{"signaturefile": embedded},
+			status:        http.StatusOK,
+			expectedValid: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+
+			reqBody := new(bytes.Buffer)
+			mp := multipart.NewWriter(reqBody)
+			for key, val := range tc.formValues {
+				for _, v := range val {
+					mp.WriteField(key, v)
+				}
+			}
+			for key, val := range tc.formFiles {
+				part, err := mp.CreateFormFile(key, key)
+				require.NoError(t, err)
+				_, err = part.Write(val)
+				require.NoError(t, err)
+			}
+			mp.Close()
+
+			req := httptest.NewRequest(http.MethodPost, "/", reqBody)
+			req.Header.Set("Content-Type", mp.FormDataContentType())
+
+			w := httptest.NewRecorder()
+			handler.ServeHTTP(w, req)
+			res := w.Result()
+			require.Equal(t, tc.status, res.StatusCode)
+
+			defer res.Body.Close()
+			body, err := io.ReadAll(res.Body)
+			require.NoError(t, err)
+
+			type resp struct {
+				Valid   bool   `json:"valid"`
+				Error   string `json:"error"`
+				Message string `json:"message"`
+			}
+			var r resp
+			err = json.Unmarshal(body, &r)
+			require.NoError(t, err)
+
+			if tc.expectedMessage != "" {
+				require.Equal(t, tc.expectedMessage, r.Message)
+			}
+
+			require.Equal(t, tc.expectedValid, r.Valid)
+
 		})
 	}
 }
