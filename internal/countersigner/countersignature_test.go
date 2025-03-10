@@ -48,11 +48,16 @@ func Test_Countersign(t *testing.T) {
 	tmpKeystore, err := keys.NewKeyStoreIn(tmpDir)
 	require.NoError(t, err)
 
-	receipt_b, err := countersigner.Countersign(cose.Sign1Message{}, tmpKeystore, "localhost", false)
+	msg1 := cose.NewSign1Message()
+	msg1.Headers.Protected[cose.HeaderLabelAlgorithm] = cose.AlgorithmES256
+	msg1.Payload = []byte("hello world")
+	msg1.Signature = []byte("signature")
+
+	receipt_b, err := countersigner.Countersign(*msg1, tmpKeystore, "localhost", false)
 	require.NoError(t, err)
 	require.NotEmpty(t, receipt_b)
 
-	var receipt cose.Sign1Message
+	var receipt cose.Countersignature
 	err = receipt.UnmarshalCBOR(receipt_b)
 	require.NoError(t, err)
 	require.NotNil(t, receipt)
@@ -64,7 +69,6 @@ func Test_Countersign(t *testing.T) {
 	require.True(t, ok)
 	require.Equal(t, cwt[signer.CWT_CLAIMS_ISSUER_KEY], interface{}("did:web:localhost"))
 
-	require.Empty(t, receipt.Payload)
 	require.NotEmpty(t, receipt.Signature)
 }
 
@@ -76,6 +80,7 @@ func Test_Countersign_embedded(t *testing.T) {
 
 	msg1 := cose.NewSign1Message()
 	msg1.Headers.Protected[cose.HeaderLabelAlgorithm] = cose.AlgorithmES256
+	msg1.Payload = []byte("hello world")
 	msg1.Signature = []byte("signature")
 
 	msg2_hex := "d28458c7a60126036a746578742f706c61696e045841233936396437353463363164626465323665356236353237663136383938663630646266636137613937303736356432343437336337323563613366343933643119018778346469643a7765623a706c617967726f756e642d636f73652d6561737475732d6170692e617a75726577656273697465732e6e65741901886464656d6f190189a36b69737375616e63655f74731a64c68f666b72656769737465725f62791a64c7e0e66b73657175656e63655f6e6f01a04566726f646f58402dc4667f6ab8fdc71835552ca7ae90ff8067f4f971516ecf81bf81afabea2d7844e2aab8eea7ea4776c5676830a157229e25b4370de6f9462705f8e67e6266cc"
@@ -95,14 +100,10 @@ func Test_Countersign_embedded(t *testing.T) {
 			require.NoError(t, err)
 			require.NotNil(t, embedded)
 			require.NotEmpty(t, embedded.Headers.Unprotected)
-			receipt_raw := embedded.Headers.Unprotected[countersigner.COSE_Countersignature_header]
-			require.NotNil(t, receipt_raw)
-			receipt_b, ok := receipt_raw.([]byte)
-			require.True(t, ok, "receipt bytes")
-
-			var receipt cose.Sign1Message
-			err = receipt.UnmarshalCBOR(receipt_b)
-			require.NoError(t, err)
+			receipt_any := embedded.Headers.Unprotected[cose.HeaderLabelCounterSignatureV2]
+			require.NotNil(t, receipt_any)
+			receipt, ok := receipt_any.(*cose.Countersignature)
+			require.True(t, ok, "receipt is Countersignature")
 			require.NotNil(t, receipt)
 			require.NotEmpty(t, receipt.Headers.Protected)
 			require.Equal(t, cose.AlgorithmES256, receipt.Headers.Protected[cose.HeaderLabelAlgorithm])
@@ -111,8 +112,6 @@ func Test_Countersign_embedded(t *testing.T) {
 			cwt, ok := receipt.Headers.Protected[signer.CWT_CLAIMS_HEADER].(map[interface{}]interface{})
 			require.True(t, ok)
 			require.Equal(t, cwt[signer.CWT_CLAIMS_ISSUER_KEY], interface{}("did:web:localhost"))
-
-			require.Empty(t, receipt.Payload)
 			require.NotEmpty(t, receipt.Signature)
 		})
 	}
@@ -124,14 +123,18 @@ func Test_countersign_then_verify(t *testing.T) {
 	tmpKeystore, err := keys.NewKeyStoreIn(tmpDir)
 	require.NoError(t, err)
 
-	target := cose.NewSign1Message()
-	result, err := countersigner.Countersign(*target, tmpKeystore, "localhost", false)
+	msg1 := cose.NewSign1Message()
+	msg1.Headers.Protected[cose.HeaderLabelAlgorithm] = cose.AlgorithmES256
+	msg1.Payload = []byte("hello world")
+	msg1.Signature = []byte("signature")
+
+	result, err := countersigner.Countersign(*msg1, tmpKeystore, "localhost", false)
 	require.NoError(t, err)
 	require.NotEmpty(t, result)
 
-	var countersignature cose.Sign1Message
+	var countersignature cose.Countersignature
 	err = countersignature.UnmarshalCBOR(result)
 	require.NoError(t, err)
-	err = countersigner.Verify(countersignature, *target, tmpKeystore)
+	err = countersigner.Verify(countersignature, *msg1, tmpKeystore)
 	require.NoError(t, err)
 }
