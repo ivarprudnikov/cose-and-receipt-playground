@@ -8,7 +8,7 @@ require (
 	github.com/lestrrat-go/jwx v1.2.31
 	github.com/stretchr/testify v1.11.1
 	github.com/veraison/go-cose v1.3.0
-	golang.org/x/time v0.12.0
+	golang.org/x/time v0.14.0
 )
 
 require (
